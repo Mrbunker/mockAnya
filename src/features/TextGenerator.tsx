@@ -35,7 +35,7 @@ export default function TextGenerator() {
       const ext = values.format;
       const suggested =
         nameInput.length > 0
-          ? nameInput.includes(".")
+          ? nameInput.toLowerCase().endsWith(`.${ext}`)
             ? nameInput
             : `${nameInput}.${ext}`
           : filename;

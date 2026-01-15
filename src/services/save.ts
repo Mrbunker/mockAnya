@@ -1,3 +1,6 @@
+const sanitize = (name: string) =>
+  (name || "output").replace(/[/\\:*?"<>|]/g, "-").trim() || "output";
+
 export async function saveBlob(
   blob: Blob,
   suggestedName: string,
@@ -10,7 +13,7 @@ export async function saveBlob(
       overrideDir || localStorage.getItem("defaultSaveDir") || undefined;
     const res = await window.ipcRenderer.invoke("save-file", {
       data,
-      suggestedName,
+      suggestedName: sanitize(suggestedName),
       defaultDir,
     });
     return res;
@@ -18,7 +21,7 @@ export async function saveBlob(
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = suggestedName;
+    a.download = sanitize(suggestedName);
     document.body.appendChild(a);
     a.click();
     a.remove();

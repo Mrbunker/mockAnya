@@ -118,6 +118,12 @@ const FormRender = () => {
         field="defaultFilename"
         showClear
         placeholder="默认用于生成文件名（不含扩展名）"
+        rules={[
+          {
+            pattern: /^[^/\\:*?"<>|]+$/,
+            message: '文件名不能包含 / \\ : * ? " < > |',
+          },
+        ]}
         onChange={(value) => handleNameSubmit({ defaultFilename: value })}
       />
     </>

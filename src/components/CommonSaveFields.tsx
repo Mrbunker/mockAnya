@@ -27,6 +27,13 @@ export default function CommonSaveFields({ formatOptions }: Props) {
         field="customName"
         label="文件名"
         placeholder="不含扩展名"
+        rules={[
+          {
+            pattern: /^[^/\\:*?"<>|]+$/,
+            message: '文件名不能包含 / \\ : * ? " < > |',
+          },
+        ]}
+        trigger="blur"
         suffix={format ? `.${format}` : undefined}
       />
       <Form.Input
