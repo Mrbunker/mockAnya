@@ -52,20 +52,34 @@ ipcMain.handle(
   "save-file",
   async (
     _event,
-    payload: { data: Uint8Array | Buffer; suggestedName?: string }
+    payload: {
+      data: Uint8Array | Buffer;
+      suggestedName?: string;
+      defaultDir?: string;
+    }
   ) => {
     try {
-      const { data, suggestedName } = payload || {};
+      const { data, suggestedName, defaultDir } = payload || {};
+      const buf = Buffer.isBuffer(data) ? data : Buffer.from(data);
+      if (defaultDir) {
+        const filePath = path.join(defaultDir, suggestedName || "output");
+        await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
+        await fs.promises.writeFile(filePath, buf);
+        return { ok: true, path: filePath };
+      }
       const result = await dialog.showSaveDialog({
         defaultPath: suggestedName || "output",
       });
       if (result.canceled || !result.filePath)
         return { ok: false, message: "canceled" };
-      const buf = Buffer.isBuffer(data) ? data : Buffer.from(data);
       await fs.promises.writeFile(result.filePath, buf);
       return { ok: true, path: result.filePath };
-    } catch (e: any) {
-      return { ok: false, message: String(e?.message ?? e) };
+    } catch (e: unknown) {
+      const msg =
+        typeof e === "object" && e && "message" in e
+          ? String((e as { message?: unknown }).message)
+          : String(e);
+      return { ok: false, message: msg };
     }
   }
 );
@@ -78,12 +92,47 @@ ipcMain.handle(
       if (!filePath) return { ok: false, message: "no filePath" };
       shell.showItemInFolder(filePath);
       return { ok: true };
-    } catch (e: any) {
-      return { ok: false, message: String(e?.message ?? e) };
+    } catch (e: unknown) {
+      const msg =
+        typeof e === "object" && e && "message" in e
+          ? String((e as { message?: unknown }).message)
+          : String(e);
+      return { ok: false, message: msg };
     }
   }
 );
 
+ipcMain.handle("choose-save-dir", async () => {
+  try {
+    const res = await dialog.showOpenDialog({
+      properties: ["openDirectory", "createDirectory"],
+    });
+    if (res.canceled || !res.filePaths?.[0])
+      return { ok: false, message: "canceled" };
+    return { ok: true, dir: res.filePaths[0] };
+  } catch (e: unknown) {
+    const msg =
+      typeof e === "object" && e && "message" in e
+        ? String((e as { message?: unknown }).message)
+        : String(e);
+    return { ok: false, message: msg };
+  }
+});
+
+ipcMain.handle("open-file", async (_event, payload: { filePath: string }) => {
+  try {
+    const { filePath } = payload || {};
+    if (!filePath) return { ok: false, message: "no filePath" };
+    const res = await shell.openPath(filePath);
+    return res ? { ok: false, message: res } : { ok: true };
+  } catch (e: unknown) {
+    const msg =
+      typeof e === "object" && e && "message" in e
+        ? String((e as { message?: unknown }).message)
+        : String(e);
+    return { ok: false, message: msg };
+  }
+});
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.

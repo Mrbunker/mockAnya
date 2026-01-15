@@ -1,16 +1,14 @@
 import { useRef, useState } from "react";
-import { Button, Form, Progress, Modal } from "@douyinfe/semi-ui";
+import { Button, Form, Progress, Toast } from "@douyinfe/semi-ui";
 import { generateText } from "../services/generate";
-import { saveBlob, openInFolder } from "../services/save";
+import { saveBlob } from "../services/save";
+import { addHistory } from "../services/history";
 
 export default function TextGenerator() {
   type FormApiLike = { getValues: () => Record<string, unknown> };
   const formApiRef = useRef<FormApiLike | null>(null);
   const [progress, setProgress] = useState(0);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [resultPath, setResultPath] = useState<string | undefined>(undefined);
-  const [resultOk, setResultOk] = useState<boolean | undefined>(undefined);
-  const [resultMsg, setResultMsg] = useState<string | undefined>(undefined);
+  // 使用 Toast 进行反馈，不再使用弹窗
 
   async function generate() {
     setProgress(0);
@@ -29,20 +27,30 @@ export default function TextGenerator() {
     try {
       type SaveResult = { ok?: boolean; path?: string; message?: string };
       const res = (await saveBlob(blob, filename)) as SaveResult;
-      setResultOk(!!res?.ok);
-      setResultPath(res?.path);
-      setResultMsg(res?.message);
-      setDialogOpen(true);
-      setProgress(res?.ok ? 100 : 0);
+      if (res?.ok) {
+        setProgress(100);
+        Toast.success("保存成功");
+        addHistory({
+          kind: "text",
+          format: values.format,
+          filename,
+          path: res.path,
+        });
+      } else {
+        setProgress(0);
+        if (res?.message === "canceled") {
+          Toast.info("已取消");
+        } else {
+          Toast.error(String(res?.message || "保存失败"));
+        }
+      }
     } catch (e: unknown) {
-      setResultOk(false);
+      setProgress(0);
       const msg =
         typeof e === "object" && e && "message" in e
           ? String((e as { message?: unknown }).message)
           : String(e);
-      setResultMsg(msg);
-      setDialogOpen(true);
-      setProgress(0);
+      Toast.error(msg);
     }
   }
 
@@ -80,7 +88,7 @@ export default function TextGenerator() {
           className="w-full"
           field="targetMB"
           label="目标大小"
-          addonAfter="单位 MB"
+          suffix="单位 MB"
           min={1}
           max={1024}
         />
@@ -91,36 +99,6 @@ export default function TextGenerator() {
         </Button>
         {progress > 0 && progress < 100 && <Progress percent={progress} />}
       </div>
-      <Modal
-        visible={dialogOpen}
-        title={
-          resultOk
-            ? "保存成功"
-            : resultMsg === "canceled"
-            ? "已取消"
-            : "保存失败"
-        }
-        onCancel={() => setDialogOpen(false)}
-        footer={
-          <>
-            {resultPath && (
-              <Button
-                onClick={async () => {
-                  await openInFolder(resultPath!);
-                  setDialogOpen(false);
-                }}
-              >
-                打开目录
-              </Button>
-            )}
-            <Button theme="borderless" onClick={() => setDialogOpen(false)}>
-              关闭
-            </Button>
-          </>
-        }
-      >
-        {resultOk ? resultPath || "" : resultMsg || ""}
-      </Modal>
     </div>
   );
 }

@@ -2,9 +2,11 @@ export async function saveBlob(blob: Blob, suggestedName: string) {
   const arrayBuffer = await blob.arrayBuffer();
   const data = new Uint8Array(arrayBuffer);
   if (window.ipcRenderer?.invoke) {
+    const defaultDir = localStorage.getItem("defaultSaveDir") || undefined;
     const res = await window.ipcRenderer.invoke("save-file", {
       data,
       suggestedName,
+      defaultDir,
     });
     return res;
   } else {
@@ -26,4 +28,27 @@ export async function openInFolder(filePath: string) {
     return res;
   }
   return { ok: false, message: "unavailable" };
+}
+
+export async function openFile(filePath: string) {
+  if (window.ipcRenderer?.invoke) {
+    const res = await window.ipcRenderer.invoke("open-file", { filePath });
+    return res;
+  }
+  return { ok: false, message: "unavailable" };
+}
+
+export async function chooseDefaultSaveDir() {
+  if (window.ipcRenderer?.invoke) {
+    const res = await window.ipcRenderer.invoke("choose-save-dir");
+    // if (res?.ok && res?.dir) {
+    //   localStorage.setItem("defaultSaveDir", String(res.dir));
+    // }
+    return res;
+  }
+  return { ok: false, message: "unavailable" };
+}
+
+export function getDefaultSaveDir(): string | null {
+  return localStorage.getItem("defaultSaveDir");
 }
