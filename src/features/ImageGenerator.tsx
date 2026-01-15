@@ -1,10 +1,15 @@
 import { useRef, useState } from "react";
 import { Button, Divider, Form, Progress, Toast } from "@douyinfe/semi-ui";
 import { generateImage } from "../services/generate";
-import { saveBlob } from "../services/save";
-import { addHistory } from "../services/history";
+import {
+  saveBlob,
+  getDefaultSaveDir,
+  getDefaultFilename,
+} from "../services/save";
 import { Kind } from "../constants";
-import { nowString } from "../lib/utils";
+import { addHistory } from "../services/history";
+import { formatDateString } from "../lib/utils";
+import CommonSaveFields from "../components/CommonSaveFields";
 
 export default function ImageGenerator() {
   type FormApiLike = { getValues: () => Record<string, unknown> };
@@ -22,6 +27,7 @@ export default function ImageGenerator() {
       bgMode: "black" | "solid" | "checker";
       color: string;
       customName?: string;
+      customDir?: string;
     };
     const { blob, filename } = await generateImage({
       format: values.format,
@@ -41,7 +47,11 @@ export default function ImageGenerator() {
             ? nameInput
             : `${nameInput}.${ext}`
           : filename;
-      const res = (await saveBlob(blob, suggested)) as SaveResult;
+      const res = (await saveBlob(
+        blob,
+        suggested,
+        values.customDir || undefined
+      )) as SaveResult;
       if (res?.ok) {
         setProgress(100);
         Toast.success("保存成功");
@@ -84,28 +94,12 @@ export default function ImageGenerator() {
           height: 360,
           bgMode: "black",
           color: "#000000",
-          customName: nowString(),
+          customName: getDefaultFilename() || formatDateString(Date.now()),
+          customDir: getDefaultSaveDir() || "",
         }}
       >
         {({ formState }) => (
           <>
-            <Form.RadioGroup
-              field="format"
-              label="文件格式"
-              type="button"
-              options={[
-                { label: "PNG", value: "png" },
-                { label: "JPEG", value: "jpeg" },
-              ]}
-            />
-            <Form.Input
-              className="w-full"
-              field="customName"
-              label="文件名"
-              placeholder="不含扩展名"
-              suffix={`.${formState.values?.format}`}
-            />
-            <Divider />
             <Form.InputNumber
               className="w-full"
               field="width"
@@ -133,6 +127,14 @@ export default function ImageGenerator() {
             {formState.values?.bgMode === "solid" ? (
               <Form.Input field="color" label="颜色" type="color" />
             ) : null}
+            <Divider />
+
+            <CommonSaveFields
+              formatOptions={[
+                { label: "PNG", value: "png" },
+                { label: "JPEG", value: "jpeg" },
+              ]}
+            />
           </>
         )}
       </Form>

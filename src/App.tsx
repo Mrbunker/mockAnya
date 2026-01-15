@@ -19,10 +19,13 @@ function App() {
   const [historyOpen, setHistoryOpen] = useState(false);
 
   return (
-    <div className="p-6">
+    <div className="">
       <div className="flex items-center justify-between">
         <div>
-          <Typography.Title heading={1}>MockAny</Typography.Title>
+          <Typography.Title heading={1}>
+            {(globalThis as unknown as { __APP_NAME__?: string })
+              .__APP_NAME__ || "mockAnya"}
+          </Typography.Title>
         </div>
         <div className="flex items-center gap-2">
           <Button

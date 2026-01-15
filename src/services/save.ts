@@ -1,8 +1,13 @@
-export async function saveBlob(blob: Blob, suggestedName: string) {
+export async function saveBlob(
+  blob: Blob,
+  suggestedName: string,
+  overrideDir?: string
+) {
   const arrayBuffer = await blob.arrayBuffer();
   const data = new Uint8Array(arrayBuffer);
   if (window.ipcRenderer?.invoke) {
-    const defaultDir = localStorage.getItem("defaultSaveDir") || undefined;
+    const defaultDir =
+      overrideDir || localStorage.getItem("defaultSaveDir") || undefined;
     const res = await window.ipcRenderer.invoke("save-file", {
       data,
       suggestedName,
@@ -56,4 +61,8 @@ export async function fileExists(filePath: string) {
     return res;
   }
   return { ok: false, message: "unavailable" };
+}
+
+export function getDefaultFilename(): string | null {
+  return localStorage.getItem("defaultFilename");
 }

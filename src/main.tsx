@@ -3,6 +3,10 @@ import ReactDOM from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
+document.title =
+  (globalThis as unknown as { __APP_NAME__?: string }).__APP_NAME__ ||
+  "mockAnya";
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <App />

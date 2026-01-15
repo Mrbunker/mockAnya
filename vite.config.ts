@@ -27,4 +27,7 @@ export default defineConfig({
           : {},
     }),
   ],
+  define: {
+    __APP_NAME__: JSON.stringify("mockAnya"),
+  },
 });

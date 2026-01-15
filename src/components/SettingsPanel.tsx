@@ -21,10 +21,14 @@ type Props = {
 
 type FormState = {
   defaultDir: string;
+  defaultFilename: string;
 };
 
 export default function SettingsPanel({ visible, onCancel }: Props) {
-  const initValues = { defaultDir: getDefaultSaveDir() ?? "" };
+  const initValues = {
+    defaultDir: getDefaultSaveDir() ?? "",
+    defaultFilename: localStorage.getItem("defaultFilename") ?? "",
+  };
 
   return (
     <SideSheet visible={visible} onCancel={onCancel} title="设置">
@@ -36,12 +40,18 @@ export default function SettingsPanel({ visible, onCancel }: Props) {
 }
 
 const FormRender = () => {
-  const { run: handleSubmit } = useDebounceFn(
+  const { run: handleDirSubmit } = useDebounceFn(
     (values: { defaultDir: string }) => {
-      if (!values.defaultDir) {
-        return;
-      }
-      localStorage.setItem("defaultSaveDir", values.defaultDir);
+      const dir = values.defaultDir?.trim();
+      if (!dir) return;
+      localStorage.setItem("defaultSaveDir", dir);
+    },
+    { wait: 700 }
+  );
+  const { run: handleNameSubmit } = useDebounceFn(
+    (values: { defaultFilename: string }) => {
+      const name = values.defaultFilename?.trim();
+      localStorage.setItem("defaultFilename", name || "");
     },
     { wait: 700 }
   );
@@ -56,7 +66,7 @@ const FormRender = () => {
         label="默认保存路径"
         field="defaultDir"
         placeholder="请输入默认保存路径"
-        onChange={(value) => handleSubmit({ defaultDir: value })}
+        onChange={(value) => handleDirSubmit({ defaultDir: value })}
       />
       <div className="flex gap-2">
         <Button
@@ -65,7 +75,7 @@ const FormRender = () => {
           onClick={async () => {
             const res = await chooseDefaultSaveDir();
             if (res?.ok) {
-              handleSubmit({ defaultDir: String(res.dir) });
+              handleDirSubmit({ defaultDir: String(res.dir) });
               formApi.setValue("defaultDir", String(res.dir));
             } else {
               Toast.info(String(res?.message || "已取消"));
@@ -97,6 +107,13 @@ const FormRender = () => {
           </Button>
         )}
       </div>
+      <Form.Input
+        className="mt-4"
+        label="默认文件名"
+        field="defaultFilename"
+        placeholder="默认用于生成文件名（不含扩展名）"
+        onChange={(value) => handleNameSubmit({ defaultFilename: value })}
+      />
     </>
   );
 };

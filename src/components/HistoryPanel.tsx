@@ -16,6 +16,7 @@ import {
   type HistoryItem,
 } from "../services/history";
 import { openFile, openInFolder, fileExists } from "../services/save";
+import { formatDateString } from "../lib/utils";
 
 type Props = {
   visible: boolean;
@@ -111,15 +112,32 @@ const HistoryItem = ({
       key={item.id}
       className={`pt-3 border rounded-lg ${invalid ? "opacity-60" : ""}`}
     >
+      <Tooltip content={invalid ? "文件不存在" : item.path || item.filename}>
+        <Typography.Text
+          link={!invalid}
+          ellipsis={{ showTooltip: false }}
+          title={invalid ? "文件不存在" : item.path || item.filename}
+          onClick={() => {
+            if (!invalid) handleOpenFile(item);
+          }}
+          className="mt-1 block"
+        >
+          <div className="flex gap-2">
+            <span className="max-w-[250px] overflow-hidden whitespace-nowrap text-ellipsis">
+              {item.filename}
+            </span>
+            <Tag>{kindToZh(item.kind)}</Tag>
+            <Tag>{item.format}</Tag>
+          </div>
+        </Typography.Text>
+      </Tooltip>
       <div className="flex justify-between items-center">
         <div
           className={`flex gap-2 text-sm ${
             invalid ? "text-gray-500" : "text-gray-700"
           }`}
         >
-          <span>{new Date(item.time).toLocaleString()}</span>
-          <Tag>{kindToZh(item.kind)}</Tag>
-          <Tag>{item.format}</Tag>
+          <span>{formatDateString(item.time)}</span>
         </div>
         <div className="mt-2 flex gap-2">
           {item.path && (
@@ -159,18 +177,6 @@ const HistoryItem = ({
           />
         </div>
       </div>
-
-      <Tooltip content={item.path || item.filename}>
-        <Typography.Text
-          link={!invalid}
-          ellipsis={{ showTooltip: false }}
-          title={item.path || item.filename}
-          onClick={() => handleOpenFile(item)}
-          className="mt-1 block w-full overflow-hidden whitespace-nowrap text-ellipsis"
-        >
-          {item.filename}
-        </Typography.Text>
-      </Tooltip>
     </div>
   );
 };

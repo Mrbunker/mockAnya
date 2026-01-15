@@ -1,10 +1,15 @@
 import { useRef, useState } from "react";
 import { Button, Divider, Form, Progress, Toast } from "@douyinfe/semi-ui";
 import { generateText } from "../services/generate";
-import { saveBlob } from "../services/save";
+import {
+  saveBlob,
+  getDefaultSaveDir,
+  getDefaultFilename,
+} from "../services/save";
 import { addHistory } from "../services/history";
 import { Kind } from "../constants";
-import { nowString } from "../lib/utils";
+import { formatDateString } from "../lib/utils";
+import CommonSaveFields from "../components/CommonSaveFields";
 
 export default function TextGenerator() {
   type FormApiLike = { getValues: () => Record<string, unknown> };
@@ -20,6 +25,7 @@ export default function TextGenerator() {
       repeatText: string;
       targetMB: number;
       customName?: string;
+      customDir?: string;
     };
     const { blob, filename } = await generateText({
       format: values.format,
@@ -37,7 +43,11 @@ export default function TextGenerator() {
             ? nameInput
             : `${nameInput}.${ext}`
           : filename;
-      const res = (await saveBlob(blob, suggested)) as SaveResult;
+      const res = (await saveBlob(
+        blob,
+        suggested,
+        values.customDir || undefined
+      )) as SaveResult;
       if (res?.ok) {
         setProgress(100);
         Toast.success("保存成功");
@@ -78,28 +88,12 @@ export default function TextGenerator() {
           format: "txt",
           repeatText: "hello",
           targetMB: 1,
-          customName: nowString(),
+          customName: getDefaultFilename() || formatDateString(Date.now()),
+          customDir: getDefaultSaveDir() || "",
         }}
       >
-        {({ formState }) => (
+        {() => (
           <>
-            <Form.RadioGroup
-              field="format"
-              label="文件格式"
-              type="button"
-              options={[
-                { label: "TXT", value: "txt" },
-                { label: "JSON", value: "json" },
-              ]}
-            />
-            <Form.Input
-              className="w-full"
-              field="customName"
-              label="文件名"
-              suffix={`.${formState.values?.format}`}
-            />
-            <Divider />
-
             <Form.Input
               className="w-full"
               field="repeatText"
@@ -113,6 +107,13 @@ export default function TextGenerator() {
               suffix="单位 MB"
               min={1}
               max={1024}
+            />
+            <Divider />
+            <CommonSaveFields
+              formatOptions={[
+                { label: "TXT", value: "txt" },
+                { label: "JSON", value: "json" },
+              ]}
             />
           </>
         )}

@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function nowString(): string {
-  const raw = new Date().toLocaleString();
+export function formatDateString(dateString: string | number): string {
+  const raw = new Date(dateString).toLocaleString();
   return raw.replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, "_");
 }
