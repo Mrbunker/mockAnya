@@ -15,7 +15,7 @@ import {
   kindToZh,
   type HistoryItem,
 } from "../services/history";
-import { openFile, openInFolder } from "../services/save";
+import { openFile, openInFolder, fileExists } from "../services/save";
 
 type Props = {
   visible: boolean;
@@ -31,11 +31,29 @@ const handleOpenFile = async (item: HistoryItem) => {
 
 export default function HistoryPanel({ visible, onCancel }: Props) {
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [invalidMap, setInvalidMap] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (visible) {
       setHistory(listHistory());
     }
+  }, [visible]);
+
+  useEffect(() => {
+    (async () => {
+      const list = listHistory();
+      const checks = await Promise.all(
+        list.map(async (item) => {
+          if (!item.path) return { id: item.id, invalid: false };
+          const res = await fileExists(item.path);
+          return { id: item.id, invalid: res?.ok ? !res.exists : false };
+        })
+      );
+      const map: Record<string, boolean> = {};
+      for (const c of checks) map[c.id] = c.invalid;
+      setInvalidMap(map);
+      setHistory(list);
+    })();
   }, [visible]);
 
   const refresh = () => setHistory(listHistory());
@@ -64,7 +82,12 @@ export default function HistoryPanel({ visible, onCancel }: Props) {
     >
       <div className="">
         {history.map((item) => (
-          <HistoryItem key={item.id} item={item} refresh={refresh} />
+          <HistoryItem
+            key={item.id}
+            item={item}
+            invalid={!!invalidMap[item.id]}
+            refresh={refresh}
+          />
         ))}
         {!history.length && (
           <div className="text-sm text-gray-500">暂无历史记录</div>
@@ -76,15 +99,24 @@ export default function HistoryPanel({ visible, onCancel }: Props) {
 
 const HistoryItem = ({
   item,
+  invalid,
   refresh,
 }: {
   item: HistoryItem;
+  invalid: boolean;
   refresh: () => void;
 }) => {
   return (
-    <div key={item.id} className="pt-3 border rounded-lg">
+    <div
+      key={item.id}
+      className={`pt-3 border rounded-lg ${invalid ? "opacity-60" : ""}`}
+    >
       <div className="flex justify-between items-center">
-        <div className="flex gap-2 text-sm text-gray-700">
+        <div
+          className={`flex gap-2 text-sm ${
+            invalid ? "text-gray-500" : "text-gray-700"
+          }`}
+        >
           <span>{new Date(item.time).toLocaleString()}</span>
           <Tag>{kindToZh(item.kind)}</Tag>
           <Tag>{item.format}</Tag>
@@ -97,8 +129,22 @@ const HistoryItem = ({
               title="打开所在文件夹"
               icon={<IconFolderOpen />}
               onClick={async () => {
-                await openInFolder(item.path!);
+                if (!item.path) return;
+                const exists = await fileExists(item.path);
+                if (!exists?.ok) {
+                  Toast.error(String(exists?.message || "打开目录失败"));
+                  return;
+                }
+                if (!exists.exists) {
+                  Toast.error("文件不存在");
+                  return;
+                }
+                const res = await openInFolder(item.path!);
+                if (!res?.ok) {
+                  Toast.error(String(res?.message || "打开目录失败"));
+                }
               }}
+              disabled={invalid}
             />
           )}
           <Button
@@ -116,12 +162,13 @@ const HistoryItem = ({
 
       <Tooltip content={item.path || item.filename}>
         <Typography.Text
-          link
+          link={!invalid}
+          ellipsis={{ showTooltip: false }}
           title={item.path || item.filename}
           onClick={() => handleOpenFile(item)}
-          className="mt-1 w-full overflow-hidden whitespace-nowrap text-ellipsis"
+          className="mt-1 block w-full overflow-hidden whitespace-nowrap text-ellipsis"
         >
-          {item.path || item.filename}
+          {item.filename}
         </Typography.Text>
       </Tooltip>
     </div>

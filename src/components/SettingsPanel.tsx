@@ -11,6 +11,7 @@ import {
   getDefaultSaveDir,
   openInFolder,
 } from "../services/save";
+import { fileExists } from "../services/save";
 import { useDebounceFn } from "ahooks";
 
 type Props = {
@@ -41,9 +42,8 @@ const FormRender = () => {
         return;
       }
       localStorage.setItem("defaultSaveDir", values.defaultDir);
-      Toast.success("已更新默认保存路径");
     },
-    { wait: 300 }
+    { wait: 700 }
   );
 
   const formValues = useFormState<FormState>();
@@ -53,7 +53,7 @@ const FormRender = () => {
   return (
     <>
       <Form.Input
-        noLabel
+        label="默认保存路径"
         field="defaultDir"
         placeholder="请输入默认保存路径"
         onChange={(value) => handleSubmit({ defaultDir: value })}
@@ -78,7 +78,19 @@ const FormRender = () => {
           <Button
             type="tertiary"
             onClick={async () => {
-              await openInFolder(defaultDir!);
+              const exists = await fileExists(defaultDir!);
+              if (!exists?.ok) {
+                Toast.error(String(exists?.message || "打开目录失败"));
+                return;
+              }
+              if (!exists.exists) {
+                Toast.error("目录不存在");
+                return;
+              }
+              const res = await openInFolder(defaultDir!);
+              if (!res?.ok) {
+                Toast.error(String(res?.message || "打开目录失败"));
+              }
             }}
           >
             打开目录

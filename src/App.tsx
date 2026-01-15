@@ -1,21 +1,17 @@
 import { useState } from "react";
 import { Tabs, TabPane, Button, Typography } from "@douyinfe/semi-ui";
-import { IconSetting, IconClock } from "@douyinfe/semi-icons";
+import {
+  IconSetting,
+  IconClock,
+  IconImage,
+  IconTextRectangle,
+} from "@douyinfe/semi-icons";
 import ImageGenerator from "./features/ImageGenerator";
 import TextGenerator from "./features/TextGenerator";
 import SettingsPanel from "./components/SettingsPanel";
 import HistoryPanel from "./components/HistoryPanel";
 import "./App.css";
-
-enum Types {
-  image = "image",
-  text = "text",
-}
-enum View {
-  image = "image",
-  text = "text",
-  settings = "settings",
-}
+import { Kind, View } from "./constants";
 
 function App() {
   const [tab, setTab] = useState<View>(View.image);
@@ -49,10 +45,26 @@ function App() {
         activeKey={tab}
         onChange={(key) => setTab(key as View)}
       >
-        <TabPane tab="图片类" itemKey={Types.image}>
+        <TabPane
+          tab={
+            <div>
+              <IconImage />
+              <span>图片类</span>
+            </div>
+          }
+          itemKey={Kind.image}
+        >
           <ImageGenerator />
         </TabPane>
-        <TabPane tab="文本类" itemKey={Types.text}>
+        <TabPane
+          tab={
+            <div>
+              <IconTextRectangle />
+              <span>文本类</span>
+            </div>
+          }
+          itemKey={Kind.text}
+        >
           <TextGenerator />
         </TabPane>
       </Tabs>

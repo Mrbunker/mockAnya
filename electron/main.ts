@@ -133,6 +133,23 @@ ipcMain.handle("open-file", async (_event, payload: { filePath: string }) => {
     return { ok: false, message: msg };
   }
 });
+ipcMain.handle(
+  "file-exists",
+  async (_event, payload: { filePath: string }) => {
+    try {
+      const { filePath } = payload || {};
+      if (!filePath) return { ok: false, message: "no filePath" };
+      const exists = fs.existsSync(filePath);
+      return { ok: true, exists };
+    } catch (e: unknown) {
+      const msg =
+        typeof e === "object" && e && "message" in e
+          ? String((e as { message?: unknown }).message)
+          : String(e);
+      return { ok: false, message: msg };
+    }
+  }
+);
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.

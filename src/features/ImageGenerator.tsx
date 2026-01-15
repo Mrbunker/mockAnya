@@ -1,8 +1,10 @@
 import { useRef, useState } from "react";
-import { Button, Form, Progress, Toast } from "@douyinfe/semi-ui";
+import { Button, Divider, Form, Progress, Toast } from "@douyinfe/semi-ui";
 import { generateImage } from "../services/generate";
 import { saveBlob } from "../services/save";
 import { addHistory } from "../services/history";
+import { Kind } from "../constants";
+import { nowString } from "../lib/utils";
 
 export default function ImageGenerator() {
   type FormApiLike = { getValues: () => Record<string, unknown> };
@@ -19,6 +21,7 @@ export default function ImageGenerator() {
       height: number;
       bgMode: "black" | "solid" | "checker";
       color: string;
+      customName?: string;
     };
     const { blob, filename } = await generateImage({
       format: values.format,
@@ -30,14 +33,22 @@ export default function ImageGenerator() {
     });
     try {
       type SaveResult = { ok?: boolean; path?: string; message?: string };
-      const res = (await saveBlob(blob, filename)) as SaveResult;
+      const nameInput = (values.customName || "").trim();
+      const ext = values.format;
+      const suggested =
+        nameInput.length > 0
+          ? nameInput.includes(".")
+            ? nameInput
+            : `${nameInput}.${ext}`
+          : filename;
+      const res = (await saveBlob(blob, suggested)) as SaveResult;
       if (res?.ok) {
         setProgress(100);
         Toast.success("保存成功");
         addHistory({
-          kind: "image",
+          kind: Kind.image,
           format: values.format,
-          filename,
+          filename: suggested,
           path: res.path,
         });
       } else {
@@ -66,26 +77,35 @@ export default function ImageGenerator() {
         }
         className="max-w-md"
         labelPosition="left"
-        labelWidth={50}
+        labelWidth={75}
         initValues={{
           format: "png",
           width: 640,
           height: 360,
           bgMode: "black",
           color: "#000000",
+          customName: nowString(),
         }}
       >
         {({ formState }) => (
           <>
             <Form.RadioGroup
               field="format"
-              label="格式"
+              label="文件格式"
               type="button"
               options={[
                 { label: "PNG", value: "png" },
                 { label: "JPEG", value: "jpeg" },
               ]}
             />
+            <Form.Input
+              className="w-full"
+              field="customName"
+              label="文件名"
+              placeholder="不含扩展名"
+              suffix={`.${formState.values?.format}`}
+            />
+            <Divider />
             <Form.InputNumber
               className="w-full"
               field="width"

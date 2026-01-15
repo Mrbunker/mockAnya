@@ -1,8 +1,10 @@
 import { useRef, useState } from "react";
-import { Button, Form, Progress, Toast } from "@douyinfe/semi-ui";
+import { Button, Divider, Form, Progress, Toast } from "@douyinfe/semi-ui";
 import { generateText } from "../services/generate";
 import { saveBlob } from "../services/save";
 import { addHistory } from "../services/history";
+import { Kind } from "../constants";
+import { nowString } from "../lib/utils";
 
 export default function TextGenerator() {
   type FormApiLike = { getValues: () => Record<string, unknown> };
@@ -17,6 +19,7 @@ export default function TextGenerator() {
       format: "txt" | "json";
       repeatText: string;
       targetMB: number;
+      customName?: string;
     };
     const { blob, filename } = await generateText({
       format: values.format,
@@ -26,14 +29,22 @@ export default function TextGenerator() {
     });
     try {
       type SaveResult = { ok?: boolean; path?: string; message?: string };
-      const res = (await saveBlob(blob, filename)) as SaveResult;
+      const nameInput = (values.customName || "").trim();
+      const ext = values.format;
+      const suggested =
+        nameInput.length > 0
+          ? nameInput.includes(".")
+            ? nameInput
+            : `${nameInput}.${ext}`
+          : filename;
+      const res = (await saveBlob(blob, suggested)) as SaveResult;
       if (res?.ok) {
         setProgress(100);
         Toast.success("保存成功");
         addHistory({
-          kind: "text",
+          kind: Kind.text,
           format: values.format,
-          filename,
+          filename: suggested,
           path: res.path,
         });
       } else {
@@ -67,31 +78,44 @@ export default function TextGenerator() {
           format: "txt",
           repeatText: "hello",
           targetMB: 1,
+          customName: nowString(),
         }}
       >
-        <Form.RadioGroup
-          field="format"
-          label="格式"
-          type="button"
-          options={[
-            { label: "TXT", value: "txt" },
-            { label: "JSON", value: "json" },
-          ]}
-        />
-        <Form.Input
-          className="w-full"
-          field="repeatText"
-          label="文本内容"
-          placeholder="文本内容将被重复插入"
-        />
-        <Form.InputNumber
-          className="w-full"
-          field="targetMB"
-          label="目标大小"
-          suffix="单位 MB"
-          min={1}
-          max={1024}
-        />
+        {({ formState }) => (
+          <>
+            <Form.RadioGroup
+              field="format"
+              label="文件格式"
+              type="button"
+              options={[
+                { label: "TXT", value: "txt" },
+                { label: "JSON", value: "json" },
+              ]}
+            />
+            <Form.Input
+              className="w-full"
+              field="customName"
+              label="文件名"
+              suffix={`.${formState.values?.format}`}
+            />
+            <Divider />
+
+            <Form.Input
+              className="w-full"
+              field="repeatText"
+              label="文本内容"
+              placeholder="文本内容将被重复插入"
+            />
+            <Form.InputNumber
+              className="w-full"
+              field="targetMB"
+              label="目标大小"
+              suffix="单位 MB"
+              min={1}
+              max={1024}
+            />
+          </>
+        )}
       </Form>
       <div className="mt-6 space-y-2">
         <Button onClick={generate} theme="solid" type="primary">

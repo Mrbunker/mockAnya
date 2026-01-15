@@ -1,7 +1,9 @@
+import { Kind } from "../constants";
+
 export type HistoryItem = {
   id: string;
   time: number;
-  kind: "image" | "text";
+  kind: Kind;
   format: string;
   filename: string;
   path?: string;

@@ -41,9 +41,6 @@ export async function openFile(filePath: string) {
 export async function chooseDefaultSaveDir() {
   if (window.ipcRenderer?.invoke) {
     const res = await window.ipcRenderer.invoke("choose-save-dir");
-    // if (res?.ok && res?.dir) {
-    //   localStorage.setItem("defaultSaveDir", String(res.dir));
-    // }
     return res;
   }
   return { ok: false, message: "unavailable" };
@@ -51,4 +48,12 @@ export async function chooseDefaultSaveDir() {
 
 export function getDefaultSaveDir(): string | null {
   return localStorage.getItem("defaultSaveDir");
+}
+
+export async function fileExists(filePath: string) {
+  if (window.ipcRenderer?.invoke) {
+    const res = await window.ipcRenderer.invoke("file-exists", { filePath });
+    return res;
+  }
+  return { ok: false, message: "unavailable" };
 }
