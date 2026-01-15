@@ -1,89 +1,95 @@
-import { useMemo, useState } from "react";
-import {
-  Button,
-  Select,
-  Input,
-  InputNumber,
-  Progress,
-  Modal,
-  Typography,
-} from "@douyinfe/semi-ui";
+import { useRef, useState } from "react";
+import { Button, Form, Progress, Modal } from "@douyinfe/semi-ui";
 import { generateText } from "../services/generate";
 import { saveBlob, openInFolder } from "../services/save";
 
 export default function TextGenerator() {
-  const [format, setFormat] = useState<"txt" | "json">("txt");
-  const [repeatText, setRepeatText] = useState("hello");
-  const [targetMB, setTargetMB] = useState(1);
+  type FormApiLike = { getValues: () => Record<string, unknown> };
+  const formApiRef = useRef<FormApiLike | null>(null);
   const [progress, setProgress] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [resultPath, setResultPath] = useState<string | undefined>(undefined);
   const [resultOk, setResultOk] = useState<boolean | undefined>(undefined);
   const [resultMsg, setResultMsg] = useState<string | undefined>(undefined);
-  const filename = useMemo(
-    () => `text_${targetMB}MB.${format}`,
-    [targetMB, format]
-  );
 
   async function generate() {
     setProgress(0);
     await new Promise((r) => setTimeout(r));
-    const { blob } = await generateText({
-      format,
-      repeatText,
-      targetMB,
+    const values = (formApiRef.current?.getValues() ?? {}) as {
+      format: "txt" | "json";
+      repeatText: string;
+      targetMB: number;
+    };
+    const { blob, filename } = await generateText({
+      format: values.format,
+      repeatText: values.repeatText,
+      targetMB: values.targetMB,
       onProgress: setProgress,
     });
     try {
-      const res = (await saveBlob(blob, filename)) as any;
+      type SaveResult = { ok?: boolean; path?: string; message?: string };
+      const res = (await saveBlob(blob, filename)) as SaveResult;
       setResultOk(!!res?.ok);
       setResultPath(res?.path);
       setResultMsg(res?.message);
       setDialogOpen(true);
       setProgress(res?.ok ? 100 : 0);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setResultOk(false);
-      setResultMsg(String(e?.message ?? e));
+      const msg =
+        typeof e === "object" && e && "message" in e
+          ? String((e as { message?: unknown }).message)
+          : String(e);
+      setResultMsg(msg);
       setDialogOpen(true);
       setProgress(0);
     }
   }
 
   return (
-    <div className="space-y-3">
-      <div className="grid gap-2 max-w-md">
-        <div className="grid gap-1">
-          <Typography.Text>格式</Typography.Text>
-          <Select
-            value={format}
-            onChange={(v) => setFormat(v as "txt" | "json")}
-          >
-            <Select.Option value="txt">TXT</Select.Option>
-            <Select.Option value="json">JSON</Select.Option>
-          </Select>
-        </div>
-        <div className="grid gap-1">
-          <Typography.Text>重复内容</Typography.Text>
-          <Input
-            value={repeatText}
-            onChange={(v) => setRepeatText(String(v))}
-          />
-        </div>
-        <div className="grid gap-1">
-          <Typography.Text>目标大小(MB)</Typography.Text>
-          <InputNumber
-            min={1}
-            max={1024}
-            value={targetMB}
-            onChange={(v) => setTargetMB(Number(v) || 0)}
-          />
-        </div>
-        <div className="mt-6 space-y-2">
-          <Button onClick={generate} theme="solid" type="primary">
-            生成并保存
-          </Button>
-          {progress > 0 && progress < 100 && <Progress percent={progress} />}
-        </div>
+    <div className="">
+      <Form
+        getFormApi={(api) =>
+          (formApiRef.current = api as unknown as FormApiLike)
+        }
+        className="max-w-md"
+        labelPosition="left"
+        labelWidth={75}
+        initValues={{
+          format: "txt",
+          repeatText: "hello",
+          targetMB: 1,
+        }}
+      >
+        <Form.RadioGroup
+          field="format"
+          label="格式"
+          type="button"
+          options={[
+            { label: "TXT", value: "txt" },
+            { label: "JSON", value: "json" },
+          ]}
+        />
+        <Form.Input
+          className="w-full"
+          field="repeatText"
+          label="文本内容"
+          placeholder="文本内容将被重复插入"
+        />
+        <Form.InputNumber
+          className="w-full"
+          field="targetMB"
+          label="目标大小"
+          addonAfter="单位 MB"
+          min={1}
+          max={1024}
+        />
+      </Form>
+      <div className="mt-6 space-y-2">
+        <Button onClick={generate} theme="solid" type="primary">
+          生成并保存
+        </Button>
+        {progress > 0 && progress < 100 && <Progress percent={progress} />}
       </div>
       <Modal
         visible={dialogOpen}

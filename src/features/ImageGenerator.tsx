@@ -1,116 +1,117 @@
-import { useMemo, useState } from "react";
-import {
-  Button,
-  Select,
-  Input,
-  InputNumber,
-  Progress,
-  Modal,
-  Typography,
-} from "@douyinfe/semi-ui";
+import { useRef, useState } from "react";
+import { Button, Form, Progress, Modal } from "@douyinfe/semi-ui";
 import { generateImage } from "../services/generate";
 import { saveBlob, openInFolder } from "../services/save";
 
 export default function ImageGenerator() {
-  const [format, setFormat] = useState<"png" | "jpeg">("png");
-  const [width, setWidth] = useState(640);
-  const [height, setHeight] = useState(360);
-  const [bgMode, setBgMode] = useState<"black" | "solid" | "checker">("black");
-  const [color, setColor] = useState("#000000");
+  type FormApiLike = { getValues: () => Record<string, unknown> };
+  const formApiRef = useRef<FormApiLike | null>(null);
   const [progress, setProgress] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [resultPath, setResultPath] = useState<string | undefined>(undefined);
   const [resultOk, setResultOk] = useState<boolean | undefined>(undefined);
   const [resultMsg, setResultMsg] = useState<string | undefined>(undefined);
-  const filename = useMemo(
-    () => `image_${width}x${height}.${format}`,
-    [width, height, format]
-  );
 
   async function generate() {
     setProgress(0);
     await new Promise((r) => setTimeout(r));
-    const { blob } = await generateImage({
-      format,
-      width,
-      height,
-      bgMode,
-      color,
+    const values = (formApiRef.current?.getValues() ?? {}) as {
+      format: "png" | "jpeg";
+      width: number;
+      height: number;
+      bgMode: "black" | "solid" | "checker";
+      color: string;
+    };
+    const { blob, filename } = await generateImage({
+      format: values.format,
+      width: values.width,
+      height: values.height,
+      bgMode: values.bgMode,
+      color: values.color,
       onProgress: setProgress,
     });
     try {
-      const res = (await saveBlob(blob, filename)) as any;
+      type SaveResult = { ok?: boolean; path?: string; message?: string };
+      const res = (await saveBlob(blob, filename)) as SaveResult;
       setResultOk(!!res?.ok);
       setResultPath(res?.path);
       setResultMsg(res?.message);
       setDialogOpen(true);
       setProgress(res?.ok ? 100 : 0);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setResultOk(false);
-      setResultMsg(String(e?.message ?? e));
+      const msg =
+        typeof e === "object" && e && "message" in e
+          ? String((e as { message?: unknown }).message)
+          : String(e);
+      setResultMsg(msg);
       setDialogOpen(true);
       setProgress(0);
     }
   }
 
   return (
-    <div className="space-y-3">
-      <div className="grid gap-2 max-w-md">
-        <div className="grid gap-1">
-          <Typography.Text>格式</Typography.Text>
-          <Select
-            value={format}
-            onChange={(v) => setFormat(v as "png" | "jpeg")}
-          >
-            <Select.Option value="png">PNG</Select.Option>
-            <Select.Option value="jpeg">JPEG</Select.Option>
-          </Select>
-        </div>
-        <div className="grid gap-1">
-          <Typography.Text>宽度</Typography.Text>
-          <InputNumber
-            min={16}
-            max={4096}
-            value={width}
-            onChange={(v) => setWidth(Number(v) || 0)}
-          />
-        </div>
-        <div className="grid gap-1">
-          <Typography.Text>高度</Typography.Text>
-          <InputNumber
-            min={16}
-            max={4096}
-            value={height}
-            onChange={(v) => setHeight(Number(v) || 0)}
-          />
-        </div>
-        <div className="grid gap-1">
-          <Typography.Text>背景</Typography.Text>
-          <Select
-            value={bgMode}
-            onChange={(v) => setBgMode(v as "black" | "solid" | "checker")}
-          >
-            <Select.Option value="black">纯黑</Select.Option>
-            <Select.Option value="solid">纯色</Select.Option>
-            <Select.Option value="checker">棋盘格</Select.Option>
-          </Select>
-        </div>
-        {bgMode === "solid" && (
-          <div className="grid gap-1">
-            <Typography.Text>颜色</Typography.Text>
-            <Input
-              type="color"
-              value={color}
-              onChange={(value) => setColor(String(value))}
+    <div className="">
+      <Form
+        getFormApi={(api) =>
+          (formApiRef.current = api as unknown as FormApiLike)
+        }
+        className="max-w-md"
+        labelPosition="left"
+        labelWidth={50}
+        initValues={{
+          format: "png",
+          width: 640,
+          height: 360,
+          bgMode: "black",
+          color: "#000000",
+        }}
+      >
+        {({ formState }) => (
+          <>
+            <Form.RadioGroup
+              field="format"
+              label="格式"
+              type="button"
+              options={[
+                { label: "PNG", value: "png" },
+                { label: "JPEG", value: "jpeg" },
+              ]}
             />
-          </div>
+            <Form.InputNumber
+              className="w-full"
+              field="width"
+              label="宽度"
+              min={16}
+              max={4096}
+            />
+            <Form.InputNumber
+              className="w-full"
+              field="height"
+              label="高度"
+              min={16}
+              max={4096}
+            />
+            <Form.RadioGroup
+              field="bgMode"
+              label="背景"
+              options={[
+                { label: "纯黑", value: "black" },
+                { label: "纯色", value: "solid" },
+                { label: "棋盘格", value: "checker" },
+              ]}
+            />
+            {formState.values?.bgMode === "solid" ? (
+              <Form.Input field="color" label="颜色" type="color" />
+            ) : null}
+          </>
         )}
-        <div className="mt-6 space-y-2">
-          <Button onClick={generate} theme="solid" type="primary">
-            生成并保存
-          </Button>
-          {progress > 0 && progress < 100 && <Progress percent={progress} />}
-        </div>
+      </Form>
+      <div className="mt-6 space-y-2">
+        <Button onClick={generate} theme="solid" type="primary">
+          生成并保存
+        </Button>
+        {progress > 0 && progress < 100 && <Progress percent={progress} />}
       </div>
       <Modal
         visible={dialogOpen}
