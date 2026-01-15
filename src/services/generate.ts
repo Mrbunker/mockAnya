@@ -93,3 +93,63 @@ export async function generateText(opts: TextOptions) {
   const filename = `text.${format}`;
   return { blob, filename };
 }
+
+export type VideoOptions = {
+  format: "mp4" | "webm" | "mov" | "mkv";
+  width: number;
+  height: number;
+  fps: number;
+  duration: number;
+  onProgress?: (value: number) => void;
+};
+
+export async function generateVideo(opts: VideoOptions) {
+  const { format, width, height, fps, duration, onProgress } = opts;
+  onProgress?.(10);
+  const res = await window.ipcRenderer?.invoke("generate-video", {
+    format,
+    width,
+    height,
+    fps,
+    duration,
+  });
+  onProgress?.(60);
+  if (!res?.ok) {
+    throw new Error(String(res?.message || "generate video failed"));
+  }
+  const data: Uint8Array = res.data as Uint8Array;
+  const ab = new ArrayBuffer(data.byteLength);
+  const view = new Uint8Array(ab);
+  view.set(data);
+  const blob = new Blob([ab]);
+  const filename = res.filename as string;
+  onProgress?.(80);
+  return { blob, filename };
+}
+
+export type AudioOptions = {
+  format?: "wav" | "mp3";
+  duration: number;
+  onProgress?: (value: number) => void;
+};
+
+export async function generateAudio(opts: AudioOptions) {
+  const { format = "wav", duration, onProgress } = opts;
+  onProgress?.(10);
+  const res = await window.ipcRenderer?.invoke("generate-audio", {
+    format,
+    duration,
+  });
+  onProgress?.(60);
+  if (!res?.ok) {
+    throw new Error(String(res?.message || "generate audio failed"));
+  }
+  const data: Uint8Array = res.data as Uint8Array;
+  const ab = new ArrayBuffer(data.byteLength);
+  const view = new Uint8Array(ab);
+  view.set(data);
+  const blob = new Blob([ab]);
+  const filename = res.filename as string;
+  onProgress?.(80);
+  return { blob, filename };
+}

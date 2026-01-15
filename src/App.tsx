@@ -7,9 +7,13 @@ import {
   IconClock,
   IconImage,
   IconTextRectangle,
+  IconVideo,
+  IconSong,
 } from "@douyinfe/semi-icons";
 import ImageGenerator from "./features/ImageGenerator";
 import TextGenerator from "./features/TextGenerator";
+import VideoGenerator from "./features/VideoGenerator";
+import AudioGenerator from "./features/AudioGenerator";
 import SettingsPanel from "./components/SettingsPanel";
 import HistoryPanel from "./components/HistoryPanel";
 import { Kind, View } from "./constants";
@@ -69,6 +73,28 @@ function App() {
           itemKey={Kind.text}
         >
           <TextGenerator />
+        </TabPane>
+        <TabPane
+          tab={
+            <div>
+              <IconVideo />
+              <span>视频类</span>
+            </div>
+          }
+          itemKey={Kind.video}
+        >
+          <VideoGenerator />
+        </TabPane>
+        <TabPane
+          tab={
+            <div>
+              <IconSong />
+              <span>音频类</span>
+            </div>
+          }
+          itemKey={Kind.audio}
+        >
+          <AudioGenerator />
         </TabPane>
       </Tabs>
 

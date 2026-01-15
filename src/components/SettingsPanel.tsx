@@ -6,7 +6,8 @@ import {
   useFormState,
   useFormApi,
 } from "@douyinfe/semi-ui";
-import { useDebounceFn } from "ahooks";
+import { IconLink } from "@douyinfe/semi-icons";
+import { useDebounceFn, useMount } from "ahooks";
 import {
   chooseDefaultSaveDir,
   getDefaultFilename,
@@ -14,7 +15,6 @@ import {
   openInFolder,
 } from "../services/save";
 import { fileExists } from "../services/save";
-import { IconLink } from "@douyinfe/semi-icons";
 
 type Props = {
   visible: boolean;
@@ -31,6 +31,14 @@ export default function SettingsPanel({ visible, onCancel }: Props) {
     defaultDir: getDefaultSaveDir() ?? "",
     defaultFilename: getDefaultFilename() ?? __APP_NAME__,
   };
+
+  useMount(() => {
+    localStorage.setItem("defaultSaveDir", initValues.defaultDir);
+    localStorage.setItem(
+      "defaultFilename",
+      initValues.defaultFilename ?? __APP_NAME__
+    );
+  });
 
   return (
     <SideSheet visible={visible} onCancel={onCancel} title="设置">
@@ -119,7 +127,7 @@ const FormRender = () => {
         label="默认文件名"
         field="defaultFilename"
         showClear
-        placeholder="默认用于生成文件名（不含扩展名）"
+        placeholder="默认用于生成文件名"
         rules={[
           {
             pattern: /^[^/\\:*?"<>|]+$/,

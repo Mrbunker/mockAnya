@@ -2,7 +2,12 @@ import { app, BrowserWindow, ipcMain, dialog, shell } from "electron";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import fs from "node:fs";
+import { spawn } from "node:child_process";
+import { createRequire } from "node:module";
 import { formatDateString } from "../src/lib/utils";
+
+const requireFFmpeg = createRequire(import.meta.url);
+const ffmpegPath = requireFFmpeg("ffmpeg-static");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -148,6 +153,122 @@ ipcMain.handle("file-exists", async (_event, payload: { filePath: string }) => {
     return { ok: false, message: msg };
   }
 });
+ipcMain.handle(
+  "generate-video",
+  async (
+    _event,
+    payload: {
+      width: number;
+      height: number;
+      fps: number;
+      duration: number;
+      format: string;
+    }
+  ) => {
+    try {
+      if (!ffmpegPath) return { ok: false, message: "ffmpeg not found" };
+      const { width, height, fps, duration, format } = payload || {};
+      const w = Number(width) || 640;
+      const h = Number(height) || 360;
+      const r = Number(fps) || 30;
+      const d = Number(duration) || 5;
+      const ext = String(format || "mp4").toLowerCase();
+      const outDir = path.join(app.getPath("temp"), "mockany");
+      await fs.promises.mkdir(outDir, { recursive: true });
+      const filename = `video_${w}x${h}_${r}fps_${d}s.${ext}`;
+      const output = path.join(outDir, filename);
+      const args = [
+        "-v",
+        "error",
+        "-f",
+        "lavfi",
+        "-i",
+        `color=c=black:s=${w}x${h}:d=${d}`,
+        "-r",
+        String(r),
+      ];
+      if (ext === "mp4" || ext === "mov" || ext === "mkv") {
+        args.push("-pix_fmt", "yuv420p");
+      }
+      args.push("-y", output);
+      await new Promise<void>((resolve, reject) => {
+        const p = spawn(ffmpegPath as string, args);
+        let stderr = "";
+        p.stderr.on("data", (c) => (stderr += String(c)));
+        p.on("error", reject);
+        p.on("close", (code) => {
+          if (code === 0) resolve();
+          else reject(new Error(stderr || `ffmpeg exit ${code}`));
+        });
+      });
+      const data = await fs.promises.readFile(output);
+      try {
+        await fs.promises.unlink(output);
+      } catch {
+        void 0;
+      }
+      return { ok: true, data, filename };
+    } catch (e: unknown) {
+      const msg =
+        typeof e === "object" && e && "message" in e
+          ? String((e as { message?: unknown }).message)
+          : String(e);
+      return { ok: false, message: msg };
+    }
+  }
+);
+ipcMain.handle(
+  "generate-audio",
+  async (_event, payload: { duration: number; format?: string }) => {
+    try {
+      if (!ffmpegPath) return { ok: false, message: "ffmpeg not found" };
+      const { duration, format } = payload || {};
+      const d = Number(duration) || 5;
+      const ext = String(format || "wav").toLowerCase();
+      const outDir = path.join(app.getPath("temp"), "mockany");
+      await fs.promises.mkdir(outDir, { recursive: true });
+      const filename = `audio_${d}s.${ext}`;
+      const output = path.join(outDir, filename);
+      const args = [
+        "-v",
+        "error",
+        "-f",
+        "lavfi",
+        "-i",
+        "anullsrc=r=44100:cl=stereo",
+        "-t",
+        String(d),
+      ];
+      if (ext === "wav") {
+        args.push("-c:a", "pcm_s16le");
+      }
+      args.push("-y", output);
+      await new Promise<void>((resolve, reject) => {
+        const p = spawn(ffmpegPath as string, args);
+        let stderr = "";
+        p.stderr.on("data", (c) => (stderr += String(c)));
+        p.on("error", reject);
+        p.on("close", (code) => {
+          if (code === 0) resolve();
+          else reject(new Error(stderr || `ffmpeg exit ${code}`));
+        });
+      });
+      const data = await fs.promises.readFile(output);
+      try {
+        await fs.promises.unlink(output);
+      } catch {
+        void 0;
+      }
+      return { ok: true, data, filename };
+    } catch (e: unknown) {
+      const msg =
+        typeof e === "object" && e && "message" in e
+          ? String((e as { message?: unknown }).message)
+          : String(e);
+      return { ok: false, message: msg };
+    }
+  }
+);
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
