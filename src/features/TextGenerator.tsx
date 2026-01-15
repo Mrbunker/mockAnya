@@ -16,17 +16,13 @@ export default function TextGenerator() {
   async function generate() {
     setProgress(0);
     await new Promise((r) => setTimeout(r));
-    const values = (formApiRef.current?.getValues() ?? {}) as {
-      format: "txt" | "json";
-      repeatText: string;
-      targetMB: number;
-      customName?: string;
-      customDir?: string;
-    };
+    const values = formApiRef.current?.getValues();
+    const { fileSizeUnit: unit = "MB", fileSizeValue: size = 1 } = values || {};
+    const fileSize = size * (unit === "MB" ? 1024 * 1024 : 1024);
     const { blob, filename } = await generateText({
       format: values.format,
       repeatText: values.repeatText,
-      targetMB: values.targetMB,
+      totalBytes: fileSize,
       onProgress: setProgress,
     });
     try {
@@ -72,6 +68,14 @@ export default function TextGenerator() {
     }
   }
 
+  const initValues = {
+    format: "txt",
+    repeatText: "",
+    fileSizeUnit: "KB",
+    fileSizeValue: 100,
+    customName: getDefaultFilename(),
+    customDir: "",
+  };
   return (
     <div className="">
       <Form
@@ -79,13 +83,7 @@ export default function TextGenerator() {
         className="max-w-md"
         labelPosition="left"
         labelWidth={75}
-        initValues={{
-          format: "txt",
-          repeatText: "hello",
-          targetMB: 1,
-          customName: getDefaultFilename(),
-          customDir: "",
-        }}
+        initValues={initValues}
       >
         {() => (
           <>
@@ -93,16 +91,29 @@ export default function TextGenerator() {
               className="w-full"
               field="repeatText"
               label="文本内容"
-              placeholder="文本内容将被重复插入"
+              placeholder="文本内容将被插入到文件中"
             />
-            <Form.InputNumber
-              className="w-full"
-              field="targetMB"
-              label="目标大小"
-              suffix="单位 MB"
-              min={1}
-              max={1024}
-            />
+
+            <Form.InputGroup label={{ text: "目标大小" }}>
+              <Form.InputNumber
+                className="w-[150px]"
+                field="fileSizeValue"
+                noLabel
+                min={1}
+                max={1024}
+                innerButtons
+              />
+              <Form.Select
+                noLabel
+                field="fileSizeUnit"
+                optionList={[
+                  { label: "MB", value: "MB" },
+                  { label: "KB", value: "KB" },
+                ]}
+                className="w-[80px]"
+              />
+            </Form.InputGroup>
+
             <Divider />
             <CommonSaveFields
               formatOptions={[

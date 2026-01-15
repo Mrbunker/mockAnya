@@ -14,6 +14,7 @@ import {
   openInFolder,
 } from "../services/save";
 import { fileExists } from "../services/save";
+import { IconLink } from "@douyinfe/semi-icons";
 
 type Props = {
   visible: boolean;
@@ -76,6 +77,7 @@ const FormRender = () => {
           <Button
             theme="solid"
             type="primary"
+            icon={<IconLink />}
             onClick={async () => {
               const res = await chooseDefaultSaveDir();
               if (res?.ok) {

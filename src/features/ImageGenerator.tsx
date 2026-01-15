@@ -100,6 +100,7 @@ export default function ImageGenerator() {
           <>
             <Form.InputNumber
               className="w-full"
+              innerButtons
               field="width"
               label="宽度"
               min={16}
@@ -107,6 +108,7 @@ export default function ImageGenerator() {
             />
             <Form.InputNumber
               className="w-full"
+              innerButtons
               field="height"
               label="高度"
               min={16}

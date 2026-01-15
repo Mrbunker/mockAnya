@@ -6,6 +6,7 @@ import {
   useFormState,
 } from "@douyinfe/semi-ui";
 import { chooseDefaultSaveDir, getDefaultSaveDir } from "../services/save";
+import { IconLink } from "@douyinfe/semi-icons";
 
 type FormatOption = { label: string; value: string };
 type Props = { formatOptions: FormatOption[] };
@@ -43,6 +44,7 @@ export default function CommonSaveFields({ formatOptions }: Props) {
         suffix={
           <Button
             type="tertiary"
+            icon={<IconLink />}
             onClick={async () => {
               const res = await chooseDefaultSaveDir();
               if (res?.ok) {

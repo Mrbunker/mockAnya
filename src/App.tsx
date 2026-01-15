@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useAtom } from "jotai";
+import { atomWithStorage } from "jotai/utils";
 import { Tabs, TabPane, Button, Typography } from "@douyinfe/semi-ui";
 import {
   IconSetting,
@@ -12,8 +14,10 @@ import SettingsPanel from "./components/SettingsPanel";
 import HistoryPanel from "./components/HistoryPanel";
 import { Kind, View } from "./constants";
 
+const tabAtom = atomWithStorage<View>("activeView", View.image);
+
 function App() {
-  const [tab, setTab] = useState<View>(View.image);
+  const [tab, setTab] = useAtom(tabAtom);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
 
