@@ -14,6 +14,7 @@
     "@douyinfe/semi-ui": "^2.90.13",
     "ahooks": "^3.9.6",
     "clsx": "^2.1.1",
+    "jotai": "^2.16.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "tailwind-merge": "^2.6.0"

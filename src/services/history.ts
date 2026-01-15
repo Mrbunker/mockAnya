@@ -1,3 +1,4 @@
+import { atom } from "jotai";
 import { Kind } from "../constants";
 
 export type HistoryItem = {
@@ -52,3 +53,16 @@ export function kindToZh(kind: HistoryItem["kind"]): string {
   if (kind === "text") return "文本";
   return String(kind);
 }
+
+export const historyAtom = atom<HistoryItem[]>(listHistory());
+export const refreshHistoryAtom = atom(null, (_get, set) => {
+  set(historyAtom, listHistory());
+});
+export const clearHistoryAtom = atom(null, (_get, set) => {
+  clearHistory();
+  set(historyAtom, listHistory());
+});
+export const removeHistoryAtom = atom(null, (_get, set, id: string) => {
+  removeHistory(id);
+  set(historyAtom, listHistory());
+});

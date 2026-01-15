@@ -1,21 +1,17 @@
 import { useRef, useState } from "react";
+import { useSetAtom } from "jotai";
 import { Button, Divider, Form, Progress, Toast } from "@douyinfe/semi-ui";
+import { FormApi } from "@douyinfe/semi-ui/lib/es/form";
 import { generateText } from "../services/generate";
-import {
-  saveBlob,
-  getDefaultSaveDir,
-  getDefaultFilename,
-} from "../services/save";
-import { addHistory } from "../services/history";
+import { saveBlob, getDefaultFilename } from "../services/save";
+import { addHistory, refreshHistoryAtom } from "../services/history";
 import { Kind } from "../constants";
-import { formatDateString } from "../lib/utils";
 import CommonSaveFields from "../components/CommonSaveFields";
 
 export default function TextGenerator() {
-  type FormApiLike = { getValues: () => Record<string, unknown> };
-  const formApiRef = useRef<FormApiLike | null>(null);
+  const formApiRef = useRef<FormApi | null>(null);
   const [progress, setProgress] = useState(0);
-  // 使用 Toast 进行反馈，不再使用弹窗
+  const refreshHistory = useSetAtom(refreshHistoryAtom);
 
   async function generate() {
     setProgress(0);
@@ -57,6 +53,7 @@ export default function TextGenerator() {
           filename: suggested,
           path: res.path,
         });
+        refreshHistory();
       } else {
         setProgress(0);
         if (res?.message === "canceled") {
@@ -78,9 +75,7 @@ export default function TextGenerator() {
   return (
     <div className="">
       <Form
-        getFormApi={(api) =>
-          (formApiRef.current = api as unknown as FormApiLike)
-        }
+        getFormApi={(api) => (formApiRef.current = api)}
         className="max-w-md"
         labelPosition="left"
         labelWidth={75}
@@ -88,8 +83,8 @@ export default function TextGenerator() {
           format: "txt",
           repeatText: "hello",
           targetMB: 1,
-          customName: getDefaultFilename() || formatDateString(Date.now()),
-          customDir: getDefaultSaveDir() || "",
+          customName: getDefaultFilename(),
+          customDir: "",
         }}
       >
         {() => (

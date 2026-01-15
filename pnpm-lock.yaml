@@ -16,6 +16,7 @@ specifiers:
   eslint: ^8.57.0
   eslint-plugin-react-hooks: ^4.6.0
   eslint-plugin-react-refresh: ^0.4.5
+  jotai: ^2.16.1
   postcss: ^8.4.49
   react: ^18.2.0
   react-dom: ^18.2.0
@@ -31,6 +32,7 @@ dependencies:
   '@douyinfe/semi-ui': 2.90.13_7oy5bngghhoic3d6rsiyrvfoga
   ahooks: 3.9.6_nnrd3gsncyragczmpvfhocinkq
   clsx: 2.1.1
+  jotai: 2.16.1_gvpw3nleobtzb6yriethvjsu44
   react: 18.3.1
   react-dom: 18.3.1_react@18.3.1
   tailwind-merge: 2.6.0
@@ -404,6 +406,7 @@ packages:
       scroll-into-view-if-needed: 2.2.31
       utility-types: 3.11.0
     transitivePeerDependencies:
+      - '@floating-ui/dom'
       - '@tiptap/suggestion'
       - '@types/react'
       - '@types/react-dom'
@@ -721,6 +724,26 @@ packages:
     resolution: {integrity: sha512-d9zaMRSTIKDLhctzH12MtXvJKSSUhaHcjV+2Z+GK+EEY7XKpP5yR4x+N3TAcHTcu963nIr+TMcCb4DBCYX1z6Q==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
     dev: true
+
+  /@floating-ui/core/1.7.3:
+    resolution: {integrity: sha512-sGnvb5dmrJaKEZ+LDIpguvdX3bDlEllmv4/ClQ9awcmCZrlx5jQyyMWFM5kBI+EyNOCDDiKk8il0zeuX3Zlg/w==}
+    dependencies:
+      '@floating-ui/utils': 0.2.10
+    dev: false
+    optional: true
+
+  /@floating-ui/dom/1.7.4:
+    resolution: {integrity: sha512-OOchDgh4F2CchOX94cRVqhvy7b3AFb+/rQXyswmzmGakRfkMgoWVjfnLWkRirfLEfuD4ysVW16eXzwt3jHIzKA==}
+    dependencies:
+      '@floating-ui/core': 1.7.3
+      '@floating-ui/utils': 0.2.10
+    dev: false
+    optional: true
+
+  /@floating-ui/utils/0.2.10:
+    resolution: {integrity: sha512-aGTxbpbg8/b5JfU1HXSrbH3wXZuLPJcNEcZQFMxLs3oSzgtVu6nFPkbbGGUvBcUjKV2YyB9Wxxabo+HEH9tcRQ==}
+    dev: false
+    optional: true
 
   /@humanwhocodes/config-array/0.13.0:
     resolution: {integrity: sha512-DZLEEqFWQFiyK6h5YIeynKx7JlvCYWL0cImfSRXZ9l4Sg2efkFGTuFf6vzXjK1cq6IYkU+Eg/JizXw+TD2vRNw==}
@@ -1106,6 +1129,19 @@ packages:
       '@tiptap/pm': 3.15.3
     dev: false
 
+  /@tiptap/extension-bubble-menu/3.15.3_hbeomsqildh7coqj2jc5vpt6hi:
+    resolution: {integrity: sha512-e88DG1bTy6hKxrt7iPVQhJnH5/EOrnKpIyp09dfRDgWrrW88fE0Qjys7a/eT8W+sXyXM3z10Ye7zpERWsrLZDg==}
+    requiresBuild: true
+    peerDependencies:
+      '@tiptap/core': ^3.15.3
+      '@tiptap/pm': ^3.15.3
+    dependencies:
+      '@floating-ui/dom': 1.7.4
+      '@tiptap/core': 3.15.3_@tiptap+pm@3.15.3
+      '@tiptap/pm': 3.15.3
+    dev: false
+    optional: true
+
   /@tiptap/extension-document/3.15.1_@tiptap+core@3.15.3:
     resolution: {integrity: sha512-iq7+S+8NFKSoJ/hMBmsKOYXOt4ipEppDewIs5T9BUBwnYJMIRZqkqxHP7iiM3z71igFUdmc1yFVqkkLZpkTU+A==}
     peerDependencies:
@@ -1113,6 +1149,19 @@ packages:
     dependencies:
       '@tiptap/core': 3.15.3_@tiptap+pm@3.15.3
     dev: false
+
+  /@tiptap/extension-floating-menu/3.15.3_hbeomsqildh7coqj2jc5vpt6hi:
+    resolution: {integrity: sha512-+3DVBleKKffadEJEdLYxmYAJOjHjLSqtiSFUE3RABT4V2ka1ODy2NIpyKX0o1SvQ5N1jViYT9Q+yUbNa6zCcDw==}
+    requiresBuild: true
+    peerDependencies:
+      '@floating-ui/dom': ^1.0.0
+      '@tiptap/core': ^3.15.3
+      '@tiptap/pm': ^3.15.3
+    dependencies:
+      '@tiptap/core': 3.15.3_@tiptap+pm@3.15.3
+      '@tiptap/pm': 3.15.3
+    dev: false
+    optional: true
 
   /@tiptap/extension-hard-break/3.15.1_@tiptap+core@3.15.3:
     resolution: {integrity: sha512-fXtpI/bNyfe8yRBI92ru537p7t0SVod+vu5jYcgUOMnc/wS1nCtVYe9KBgntgg8D2bHcZA/Vf41Ft4hsOCFdlw==}
@@ -1201,6 +1250,11 @@ packages:
       react: 18.3.1
       react-dom: 18.3.1_react@18.3.1
       use-sync-external-store: 1.6.0_react@18.3.1
+    optionalDependencies:
+      '@tiptap/extension-bubble-menu': 3.15.3_hbeomsqildh7coqj2jc5vpt6hi
+      '@tiptap/extension-floating-menu': 3.15.3_hbeomsqildh7coqj2jc5vpt6hi
+    transitivePeerDependencies:
+      - '@floating-ui/dom'
     dev: false
 
   /@tootallnate/once/2.0.0:
@@ -3247,6 +3301,28 @@ packages:
     resolution: {integrity: sha512-/imKNG4EbWNrVjoNC/1H5/9GFy+tqjGBHCaSsN+P2RnPqjsLmv6UD3Ej+Kj8nBWaRAwyk7kK5ZUc+OEatnTR3A==}
     hasBin: true
     dev: true
+
+  /jotai/2.16.1_gvpw3nleobtzb6yriethvjsu44:
+    resolution: {integrity: sha512-vrHcAbo3P7Br37C8Bv6JshMtlKMPqqmx0DDREtTjT4nf3QChDrYdbH+4ik/9V0cXA57dK28RkJ5dctYvavcIlg==}
+    engines: {node: '>=12.20.0'}
+    peerDependencies:
+      '@babel/core': '>=7.0.0'
+      '@babel/template': '>=7.0.0'
+      '@types/react': '>=17.0.0'
+      react: '>=17.0.0'
+    peerDependenciesMeta:
+      '@babel/core':
+        optional: true
+      '@babel/template':
+        optional: true
+      '@types/react':
+        optional: true
+      react:
+        optional: true
+    dependencies:
+      '@types/react': 18.3.27
+      react: 18.3.1
+    dev: false
 
   /js-cookie/3.0.5:
     resolution: {integrity: sha512-cEiJEAEoIbWfCZYKWhVwFuvPX1gETRYPw6LlaTKoxD3s2AkXzkCjnp6h0V77ozyqj0jakteJ4YqDJT830+lVGw==}

@@ -5,7 +5,7 @@ import {
   useFormApi,
   useFormState,
 } from "@douyinfe/semi-ui";
-import { chooseDefaultSaveDir } from "../services/save";
+import { chooseDefaultSaveDir, getDefaultSaveDir } from "../services/save";
 
 type FormatOption = { label: string; value: string };
 type Props = { formatOptions: FormatOption[] };
@@ -32,7 +32,7 @@ export default function CommonSaveFields({ formatOptions }: Props) {
       <Form.Input
         className="w-full"
         field="customDir"
-        label="保存位置"
+        label="保存路径"
         suffix={
           <Button
             type="tertiary"
@@ -48,7 +48,7 @@ export default function CommonSaveFields({ formatOptions }: Props) {
             选择路径
           </Button>
         }
-        placeholder="不填则使用默认保存路径"
+        placeholder={`${getDefaultSaveDir() || "请输入保存路径"}`}
       />
     </>
   );

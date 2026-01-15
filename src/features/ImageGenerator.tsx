@@ -1,14 +1,10 @@
 import { useRef, useState } from "react";
+import { useSetAtom } from "jotai";
 import { Button, Divider, Form, Progress, Toast } from "@douyinfe/semi-ui";
 import { generateImage } from "../services/generate";
-import {
-  saveBlob,
-  getDefaultSaveDir,
-  getDefaultFilename,
-} from "../services/save";
+import { saveBlob, getDefaultFilename } from "../services/save";
 import { Kind } from "../constants";
-import { addHistory } from "../services/history";
-import { formatDateString } from "../lib/utils";
+import { addHistory, refreshHistoryAtom } from "../services/history";
 import CommonSaveFields from "../components/CommonSaveFields";
 
 export default function ImageGenerator() {
@@ -16,6 +12,7 @@ export default function ImageGenerator() {
   const formApiRef = useRef<FormApiLike | null>(null);
   const [progress, setProgress] = useState(0);
   // 使用 Toast 进行反馈，不再使用弹窗
+  const refreshHistory = useSetAtom(refreshHistoryAtom);
 
   async function generate() {
     setProgress(0);
@@ -61,6 +58,7 @@ export default function ImageGenerator() {
           filename: suggested,
           path: res.path,
         });
+        refreshHistory();
       } else {
         setProgress(0);
         if (res?.message === "canceled") {
@@ -94,8 +92,8 @@ export default function ImageGenerator() {
           height: 360,
           bgMode: "black",
           color: "#000000",
-          customName: getDefaultFilename() || formatDateString(Date.now()),
-          customDir: getDefaultSaveDir() || "",
+          customName: getDefaultFilename(),
+          customDir: "",
         }}
       >
         {({ formState }) => (

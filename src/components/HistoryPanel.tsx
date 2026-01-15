@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAtomValue, useSetAtom } from "jotai";
 import {
   SideSheet,
   Button,
@@ -9,11 +10,11 @@ import {
 } from "@douyinfe/semi-ui";
 import { IconDelete, IconFolderOpen } from "@douyinfe/semi-icons";
 import {
-  listHistory,
-  clearHistory,
-  removeHistory,
   kindToZh,
   type HistoryItem,
+  historyAtom,
+  clearHistoryAtom,
+  removeHistoryAtom,
 } from "../services/history";
 import { openFile, openInFolder, fileExists } from "../services/save";
 import { formatDateString } from "../lib/utils";
@@ -31,20 +32,15 @@ const handleOpenFile = async (item: HistoryItem) => {
 };
 
 export default function HistoryPanel({ visible, onCancel }: Props) {
-  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const history = useAtomValue(historyAtom);
   const [invalidMap, setInvalidMap] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    if (visible) {
-      setHistory(listHistory());
-    }
-  }, [visible]);
+  const doClear = useSetAtom(clearHistoryAtom);
 
   useEffect(() => {
     (async () => {
-      const list = listHistory();
+      if (!visible) return;
       const checks = await Promise.all(
-        list.map(async (item) => {
+        history.map(async (item) => {
           if (!item.path) return { id: item.id, invalid: false };
           const res = await fileExists(item.path);
           return { id: item.id, invalid: res?.ok ? !res.exists : false };
@@ -53,11 +49,8 @@ export default function HistoryPanel({ visible, onCancel }: Props) {
       const map: Record<string, boolean> = {};
       for (const c of checks) map[c.id] = c.invalid;
       setInvalidMap(map);
-      setHistory(list);
     })();
-  }, [visible]);
-
-  const refresh = () => setHistory(listHistory());
+  }, [visible, history]);
 
   return (
     <SideSheet
@@ -71,8 +64,7 @@ export default function HistoryPanel({ visible, onCancel }: Props) {
             theme="borderless"
             type="tertiary"
             onClick={() => {
-              clearHistory();
-              refresh();
+              doClear();
               Toast.success("已清空历史");
             }}
           >
@@ -87,7 +79,6 @@ export default function HistoryPanel({ visible, onCancel }: Props) {
             key={item.id}
             item={item}
             invalid={!!invalidMap[item.id]}
-            refresh={refresh}
           />
         ))}
         {!history.length && (
@@ -101,25 +92,26 @@ export default function HistoryPanel({ visible, onCancel }: Props) {
 const HistoryItem = ({
   item,
   invalid,
-  refresh,
 }: {
   item: HistoryItem;
   invalid: boolean;
-  refresh: () => void;
 }) => {
+  const removeItem = useSetAtom(removeHistoryAtom);
   return (
     <div
       key={item.id}
-      className={`pt-3 border rounded-lg ${invalid ? "opacity-60" : ""}`}
+      className={`mb-2 p-2 border rounded-md cursor-pointer bg-semi-color-tertiary-light-default ${
+        invalid ? "opacity-60" : ""
+      }`}
+      onClick={() => {
+        if (!invalid) handleOpenFile(item);
+      }}
     >
       <Tooltip content={invalid ? "文件不存在" : item.path || item.filename}>
         <Typography.Text
           link={!invalid}
           ellipsis={{ showTooltip: false }}
           title={invalid ? "文件不存在" : item.path || item.filename}
-          onClick={() => {
-            if (!invalid) handleOpenFile(item);
-          }}
           className="mt-1 block"
         >
           <div className="flex gap-2">
@@ -146,7 +138,8 @@ const HistoryItem = ({
               type="tertiary"
               title="打开所在文件夹"
               icon={<IconFolderOpen />}
-              onClick={async () => {
+              onClick={async (e) => {
+                e.stopPropagation();
                 if (!item.path) return;
                 const exists = await fileExists(item.path);
                 if (!exists?.ok) {
@@ -170,9 +163,9 @@ const HistoryItem = ({
             type="tertiary"
             title="删除"
             icon={<IconDelete />}
-            onClick={() => {
-              removeHistory(item.id);
-              refresh();
+            onClick={(e) => {
+              e.stopPropagation();
+              removeItem(item.id);
             }}
           />
         </div>

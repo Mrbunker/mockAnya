@@ -7,6 +7,6 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatDateString(dateString: string | number): string {
-  const raw = new Date(dateString).toLocaleString();
-  return raw.replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, "_");
+  const time = new Date(dateString).toLocaleString();
+  return time;
 }

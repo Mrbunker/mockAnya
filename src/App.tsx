@@ -10,7 +10,6 @@ import ImageGenerator from "./features/ImageGenerator";
 import TextGenerator from "./features/TextGenerator";
 import SettingsPanel from "./components/SettingsPanel";
 import HistoryPanel from "./components/HistoryPanel";
-import "./App.css";
 import { Kind, View } from "./constants";
 
 function App() {
@@ -22,10 +21,7 @@ function App() {
     <div className="">
       <div className="flex items-center justify-between">
         <div>
-          <Typography.Title heading={1}>
-            {(globalThis as unknown as { __APP_NAME__?: string })
-              .__APP_NAME__ || "mockAnya"}
-          </Typography.Title>
+          <Typography.Title heading={1}>{__APP_NAME__}</Typography.Title>
         </div>
         <div className="flex items-center gap-2">
           <Button
