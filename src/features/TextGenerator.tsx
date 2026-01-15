@@ -17,8 +17,12 @@ export default function TextGenerator() {
     setProgress(0);
     await new Promise((r) => setTimeout(r));
     const values = formApiRef.current?.getValues();
-    const { fileSizeUnit: unit = "MB", fileSizeValue: size = 1 } = values || {};
-    const fileSize = size * (unit === "MB" ? 1024 * 1024 : 1024);
+    const unit = (values?.fileSizeUnit as string) || "MB";
+    const size = values?.fileSizeValue as number | undefined;
+    const fileSize =
+      typeof size === "number" && size > 0
+        ? size * (unit === "MB" ? 1024 * 1024 : 1024)
+        : undefined;
     const { blob, filename } = await generateText({
       format: values.format,
       repeatText: values.repeatText,
@@ -72,7 +76,7 @@ export default function TextGenerator() {
     format: "txt",
     repeatText: "",
     fileSizeUnit: "KB",
-    fileSizeValue: 100,
+    fileSizeValue: undefined,
     customName: getDefaultFilename(),
     customDir: "",
   };
@@ -87,21 +91,15 @@ export default function TextGenerator() {
       >
         {() => (
           <>
-            <Form.Input
-              className="w-full"
-              field="repeatText"
-              label="文本内容"
-              placeholder="文本内容将被插入到文件中"
-            />
-
-            <Form.InputGroup label={{ text: "目标大小" }}>
+            <Form.InputGroup label={{ text: "目标大小" }} className="w-full">
               <Form.InputNumber
-                className="w-[150px]"
                 field="fileSizeValue"
                 noLabel
+                placeholder="请输入目标大小"
                 min={1}
                 max={1024}
                 innerButtons
+                className="w-[150px]"
               />
               <Form.Select
                 noLabel
@@ -113,6 +111,12 @@ export default function TextGenerator() {
                 className="w-[80px]"
               />
             </Form.InputGroup>
+            <Form.Input
+              className="w-full"
+              field="repeatText"
+              label="文本内容"
+              placeholder="文本内容将被写入到文件中"
+            />
 
             <Divider />
             <CommonSaveFields

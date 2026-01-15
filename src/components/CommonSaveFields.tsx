@@ -12,8 +12,8 @@ type FormatOption = { label: string; value: string };
 type Props = { formatOptions: FormatOption[] };
 
 export default function CommonSaveFields({ formatOptions }: Props) {
-  const formState = useFormState<Record<string, unknown>>();
-  const formApi = useFormApi<Record<string, unknown>>();
+  const formState = useFormState();
+  const formApi = useFormApi();
   const format = String(formState.values?.format || "");
   return (
     <>

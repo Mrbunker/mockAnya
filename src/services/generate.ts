@@ -45,34 +45,50 @@ export async function generateImage(opts: ImageOptions) {
 export type TextOptions = {
   format: "txt" | "json";
   repeatText: string;
-  totalBytes: number;
+  totalBytes?: number;
   onProgress?: (value: number) => void;
 };
 
 export async function generateText(opts: TextOptions) {
   const { format, repeatText, totalBytes, onProgress } = opts;
-  const chunk = (repeatText + "\n").repeat(1000);
-  const encoder = new TextEncoder();
-  let size = 0;
-  const parts: string[] = [];
-  while (size < totalBytes) {
-    const encoded = encoder.encode(chunk);
-    parts.push(chunk);
-    size += encoded.byteLength;
-    onProgress?.(Math.min(99, Math.floor((size / totalBytes) * 100)));
-    if (parts.length % 100 === 0) await new Promise((r) => setTimeout(r));
-  }
   let blob: Blob;
-  if (format === "txt") {
-    blob = new Blob(parts, { type: "text/plain" });
+  if (!totalBytes || totalBytes <= 0) {
+    if (format === "txt") {
+      blob = new Blob([repeatText], { type: "text/plain" });
+    } else {
+      const obj = { content: repeatText, repeatsApprox: 1 };
+      blob = new Blob([JSON.stringify(obj, null, 2)], {
+        type: "application/json",
+      });
+    }
   } else {
-    const obj = {
-      content: repeatText,
-      repeatsApprox: Math.round(size / encoder.encode(repeatText).byteLength),
-    };
-    blob = new Blob([JSON.stringify(obj, null, 2)], {
-      type: "application/json",
-    });
+    if (format === "txt") {
+      const encoder = new TextEncoder();
+      const chunkBytes = encoder.encode((repeatText + "\n").repeat(1000));
+      let size = 0;
+      const parts: ArrayBuffer[] = [];
+      while (size + chunkBytes.byteLength <= totalBytes) {
+        parts.push(chunkBytes.buffer);
+        size += chunkBytes.byteLength;
+        onProgress?.(Math.min(99, Math.floor((size / totalBytes) * 100)));
+        if (parts.length % 100 === 0) await new Promise((r) => setTimeout(r));
+      }
+      const remaining = totalBytes - size;
+      if (remaining > 0) {
+        parts.push(chunkBytes.buffer.slice(0, remaining));
+        size += remaining;
+        onProgress?.(Math.min(99, Math.floor((size / totalBytes) * 100)));
+      }
+      blob = new Blob(parts, { type: "text/plain" });
+    } else {
+      const unitLen = new TextEncoder().encode(repeatText).byteLength;
+      const repeatsApprox =
+        unitLen > 0 ? Math.round((totalBytes ?? 0) / unitLen) : 0;
+      const obj = { content: repeatText, repeatsApprox };
+      blob = new Blob([JSON.stringify(obj, null, 2)], {
+        type: "application/json",
+      });
+    }
   }
   const filename = `text.${format}`;
   return { blob, filename };

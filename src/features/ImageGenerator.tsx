@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useSetAtom } from "jotai";
 import { Button, Divider, Form, Progress, Toast } from "@douyinfe/semi-ui";
+import { FormApi } from "@douyinfe/semi-ui/lib/es/form";
 import { generateImage } from "../services/generate";
 import { saveBlob, getDefaultFilename } from "../services/save";
 import { Kind } from "../constants";
@@ -8,8 +9,7 @@ import { addHistory, refreshHistoryAtom } from "../services/history";
 import CommonSaveFields from "../components/CommonSaveFields";
 
 export default function ImageGenerator() {
-  type FormApiLike = { getValues: () => Record<string, unknown> };
-  const formApiRef = useRef<FormApiLike | null>(null);
+  const formApiRef = useRef<FormApi>();
   const [progress, setProgress] = useState(0);
   // 使用 Toast 进行反馈，不再使用弹窗
   const refreshHistory = useSetAtom(refreshHistoryAtom);
@@ -80,9 +80,7 @@ export default function ImageGenerator() {
   return (
     <div className="">
       <Form
-        getFormApi={(api) =>
-          (formApiRef.current = api as unknown as FormApiLike)
-        }
+        getFormApi={(api) => (formApiRef.current = api)}
         className="max-w-md"
         labelPosition="left"
         labelWidth={75}
@@ -98,11 +96,33 @@ export default function ImageGenerator() {
       >
         {({ formState }) => (
           <>
-            <Form.InputNumber
+            <Form.InputGroup label={{ text: "图片尺寸" }} className="w-full">
+              <Form.InputNumber
+                className="w-[125px]"
+                innerButtons
+                field="width"
+                prefix="宽"
+                rules={[{ validator: (_r, v) => v > 0, message: "宽度错误" }]}
+                min={16}
+                max={4096}
+              />
+              <Form.InputNumber
+                className="w-[125px]"
+                // className="w-full"
+                innerButtons
+                field="height"
+                prefix="高"
+                rules={[{ validator: (_r, v) => v > 0, message: "高度错误" }]}
+                min={16}
+                max={4096}
+              />
+            </Form.InputGroup>
+            {/* <Form.InputNumber
               className="w-full"
               innerButtons
               field="width"
               label="宽度"
+              rules={[{ validator: (_r, v) => v > 0, message: "宽度错误" }]}
               min={16}
               max={4096}
             />
@@ -111,9 +131,10 @@ export default function ImageGenerator() {
               innerButtons
               field="height"
               label="高度"
+              rules={[{ validator: (_r, v) => v > 0, message: "高度错误" }]}
               min={16}
               max={4096}
-            />
+            /> */}
             <Form.RadioGroup
               field="bgMode"
               label="背景"
