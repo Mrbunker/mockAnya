@@ -1,17 +1,19 @@
+import { ipcClient } from "../ipc/client";
+import { IPC_INVOKE } from "../ipc/contract";
+import { ok, type Result } from "../lib/result";
+
 const sanitize = (name: string) =>
   (name || "output").replace(/[/\\:*?"<>|]/g, "-").trim() || "output";
 
 export async function saveBlob(
   blob: Blob,
   suggestedName: string,
-  overrideDir?: string
-) {
+  defaultDir?: string
+): Promise<Result<{ path?: string }>> {
   const arrayBuffer = await blob.arrayBuffer();
   const data = new Uint8Array(arrayBuffer);
-  if (window.ipcRenderer?.invoke) {
-    const defaultDir =
-      overrideDir || localStorage.getItem("defaultSaveDir") || undefined;
-    const res = await window.ipcRenderer.invoke("save-file", {
+  if (ipcClient.isAvailable()) {
+    const res = await ipcClient.invoke(IPC_INVOKE.saveFile, {
       data,
       suggestedName: sanitize(suggestedName),
       defaultDir,
@@ -26,46 +28,22 @@ export async function saveBlob(
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    return { ok: true };
+    return ok({ path: undefined });
   }
 }
 
 export async function openInFolder(filePath: string) {
-  if (window.ipcRenderer?.invoke) {
-    const res = await window.ipcRenderer.invoke("open-in-folder", { filePath });
-    return res;
-  }
-  return { ok: false, message: "unavailable" };
+  return ipcClient.invoke(IPC_INVOKE.openInFolder, { filePath });
 }
 
 export async function openFile(filePath: string) {
-  if (window.ipcRenderer?.invoke) {
-    const res = await window.ipcRenderer.invoke("open-file", { filePath });
-    return res;
-  }
-  return { ok: false, message: "unavailable" };
+  return ipcClient.invoke(IPC_INVOKE.openFile, { filePath });
 }
 
 export async function chooseDefaultSaveDir() {
-  if (window.ipcRenderer?.invoke) {
-    const res = await window.ipcRenderer.invoke("choose-save-dir");
-    return res;
-  }
-  return { ok: false, message: "unavailable" };
-}
-
-export function getDefaultSaveDir(): string | null {
-  return localStorage.getItem("defaultSaveDir");
+  return ipcClient.invoke(IPC_INVOKE.chooseSaveDir);
 }
 
 export async function fileExists(filePath: string) {
-  if (window.ipcRenderer?.invoke) {
-    const res = await window.ipcRenderer.invoke("file-exists", { filePath });
-    return res;
-  }
-  return { ok: false, message: "unavailable" };
-}
-
-export function getDefaultFilename(): string | null {
-  return localStorage.getItem("defaultFilename");
+  return ipcClient.invoke(IPC_INVOKE.fileExists, { filePath });
 }

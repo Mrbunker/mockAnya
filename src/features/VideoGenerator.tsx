@@ -1,21 +1,25 @@
 import { useRef, useState } from "react";
-import { useSetAtom } from "jotai";
-import { Button, Divider, Form, Progress, Toast } from "@douyinfe/semi-ui";
+import { useAtomValue, useSetAtom } from "jotai";
+import { Button, Divider, Form, Progress } from "@douyinfe/semi-ui";
 import { FormApi } from "@douyinfe/semi-ui/lib/es/form";
 import { generateVideo } from "../services/generate";
-import { saveBlob, getDefaultFilename } from "../services/save";
 import { Kind } from "../constants";
-import { addHistory, refreshHistoryAtom } from "../services/history";
+import { addHistoryAtom } from "../state/historyAtoms";
+import {
+  defaultFilenameAtom,
+  defaultSaveDirAtom,
+} from "../state/settingsAtoms";
 import CommonSaveFields from "../components/CommonSaveFields";
+import { runGenerateSaveFlow } from "../services/generatorFlow";
 
 export default function VideoGenerator() {
   const formApiRef = useRef<FormApi>();
   const [progress, setProgress] = useState(0);
-  const refreshHistory = useSetAtom(refreshHistoryAtom);
+  const defaultFilename = useAtomValue(defaultFilenameAtom);
+  const defaultSaveDir = useAtomValue(defaultSaveDirAtom);
+  const addHistory = useSetAtom(addHistoryAtom);
 
   async function generate() {
-    setProgress(0);
-    await new Promise((r) => setTimeout(r));
     const values = (formApiRef.current?.getValues() ?? {}) as {
       format: "mp4" | "webm" | "mov" | "mkv";
       width: number;
@@ -25,55 +29,24 @@ export default function VideoGenerator() {
       customName?: string;
       customDir?: string;
     };
-    const { blob, filename } = await generateVideo({
+    await runGenerateSaveFlow({
+      kind: Kind.video,
       format: values.format,
-      width: values.width,
-      height: values.height,
-      fps: values.fps,
-      duration: values.duration,
-      onProgress: setProgress,
-    });
-    try {
-      type SaveResult = { ok?: boolean; path?: string; message?: string };
-      const nameInput = (values.customName || "").trim();
-      const ext = values.format;
-      const suggested =
-        nameInput.length > 0
-          ? nameInput.toLowerCase().endsWith(`.${ext}`)
-            ? nameInput
-            : `${nameInput}.${ext}`
-          : filename;
-      const res = (await saveBlob(
-        blob,
-        suggested,
-        values.customDir || undefined
-      )) as SaveResult;
-      if (res?.ok) {
-        setProgress(100);
-        Toast.success("保存成功");
-        addHistory({
-          kind: Kind.video,
+      customName: values.customName,
+      customDir: values.customDir,
+      defaultDir: defaultSaveDir,
+      setProgress,
+      addHistory,
+      generate: () =>
+        generateVideo({
           format: values.format,
-          filename: suggested,
-          path: res.path,
-        });
-        refreshHistory();
-      } else {
-        setProgress(0);
-        if (res?.message === "canceled") {
-          Toast.info("已取消");
-        } else {
-          Toast.error(String(res?.message || "保存失败"));
-        }
-      }
-    } catch (e: unknown) {
-      setProgress(0);
-      const msg =
-        typeof e === "object" && e && "message" in e
-          ? String((e as { message?: unknown }).message)
-          : String(e);
-      Toast.error(msg);
-    }
+          width: values.width,
+          height: values.height,
+          fps: values.fps,
+          duration: values.duration,
+          onProgress: setProgress,
+        }),
+    });
   }
 
   return (
@@ -89,7 +62,7 @@ export default function VideoGenerator() {
           height: 360,
           fps: 30,
           duration: 5,
-          customName: getDefaultFilename(),
+          customName: defaultFilename,
           customDir: "",
         }}
       >

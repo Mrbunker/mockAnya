@@ -5,6 +5,22 @@ import fs from "node:fs";
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { formatDateString } from "../src/lib/utils";
+import {
+  ERROR_CODE,
+  err,
+  getErrorMessageFromUnknown,
+  ok,
+} from "../src/lib/result";
+import {
+  IPC_EVENT,
+  IPC_INVOKE,
+  type GenerateAudioPayload,
+  type GenerateVideoPayload,
+  type OpenFilePayload,
+  type OpenInFolderPayload,
+  type SaveFilePayload,
+  type FileExistsPayload,
+} from "../src/ipc/contract";
 
 const requireFFmpeg = createRequire(import.meta.url);
 const ffmpegPath = requireFFmpeg("ffmpeg-static");
@@ -43,7 +59,10 @@ function createWindow() {
 
   // Test active push message to Renderer-process.
   win.webContents.on("did-finish-load", () => {
-    win?.webContents.send("main-process-message", formatDateString(Date.now()));
+    win?.webContents.send(
+      IPC_EVENT.mainProcessMessage,
+      formatDateString(Date.now()),
+    );
   });
 
   if (VITE_DEV_SERVER_URL) {
@@ -55,15 +74,8 @@ function createWindow() {
 }
 
 ipcMain.handle(
-  "save-file",
-  async (
-    _event,
-    payload: {
-      data: Uint8Array | Buffer;
-      suggestedName?: string;
-      defaultDir?: string;
-    }
-  ) => {
+  IPC_INVOKE.saveFile,
+  async (_event, payload: SaveFilePayload) => {
     try {
       const { data, suggestedName, defaultDir } = payload || {};
       const buf = Buffer.isBuffer(data) ? data : Buffer.from(data);
@@ -71,102 +83,80 @@ ipcMain.handle(
         const filePath = path.join(defaultDir, suggestedName || "output");
         await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
         await fs.promises.writeFile(filePath, buf);
-        return { ok: true, path: filePath };
+        return ok({ path: filePath });
       }
       const result = await dialog.showSaveDialog({
         defaultPath: suggestedName || "output",
       });
       if (result.canceled || !result.filePath)
-        return { ok: false, message: "canceled" };
+        return err(ERROR_CODE.canceled, "canceled");
       await fs.promises.writeFile(result.filePath, buf);
-      return { ok: true, path: result.filePath };
+      return ok({ path: result.filePath });
     } catch (e: unknown) {
-      const msg =
-        typeof e === "object" && e && "message" in e
-          ? String((e as { message?: unknown }).message)
-          : String(e);
-      return { ok: false, message: msg };
+      return err(ERROR_CODE.unknown, getErrorMessageFromUnknown(e));
     }
-  }
+  },
 );
 
 ipcMain.handle(
-  "open-in-folder",
-  async (_event, payload: { filePath: string }) => {
+  IPC_INVOKE.openInFolder,
+  async (_event, payload: OpenInFolderPayload) => {
     try {
       const { filePath } = payload || {};
-      if (!filePath) return { ok: false, message: "no filePath" };
+      if (!filePath) return err(ERROR_CODE.invalidParam, "no filePath");
       shell.showItemInFolder(filePath);
-      return { ok: true };
+      return ok({});
     } catch (e: unknown) {
-      const msg =
-        typeof e === "object" && e && "message" in e
-          ? String((e as { message?: unknown }).message)
-          : String(e);
-      return { ok: false, message: msg };
+      return err(ERROR_CODE.unknown, getErrorMessageFromUnknown(e));
     }
-  }
+  },
 );
 
-ipcMain.handle("choose-save-dir", async () => {
+ipcMain.handle(IPC_INVOKE.chooseSaveDir, async () => {
   try {
     const res = await dialog.showOpenDialog({
       properties: ["openDirectory", "createDirectory"],
     });
     if (res.canceled || !res.filePaths?.[0])
-      return { ok: false, message: "canceled" };
-    return { ok: true, dir: res.filePaths[0] };
+      return err(ERROR_CODE.canceled, "canceled");
+    return ok({ dir: res.filePaths[0] });
   } catch (e: unknown) {
-    const msg =
-      typeof e === "object" && e && "message" in e
-        ? String((e as { message?: unknown }).message)
-        : String(e);
-    return { ok: false, message: msg };
+    return err(ERROR_CODE.unknown, getErrorMessageFromUnknown(e));
   }
 });
 
-ipcMain.handle("open-file", async (_event, payload: { filePath: string }) => {
-  try {
-    const { filePath } = payload || {};
-    if (!filePath) return { ok: false, message: "no filePath" };
-    const res = await shell.openPath(filePath);
-    return res ? { ok: false, message: res } : { ok: true };
-  } catch (e: unknown) {
-    const msg =
-      typeof e === "object" && e && "message" in e
-        ? String((e as { message?: unknown }).message)
-        : String(e);
-    return { ok: false, message: msg };
-  }
-});
-ipcMain.handle("file-exists", async (_event, payload: { filePath: string }) => {
-  try {
-    const { filePath } = payload || {};
-    if (!filePath) return { ok: false, message: "no filePath" };
-    const exists = fs.existsSync(filePath);
-    return { ok: true, exists };
-  } catch (e: unknown) {
-    const msg =
-      typeof e === "object" && e && "message" in e
-        ? String((e as { message?: unknown }).message)
-        : String(e);
-    return { ok: false, message: msg };
-  }
-});
 ipcMain.handle(
-  "generate-video",
-  async (
-    _event,
-    payload: {
-      width: number;
-      height: number;
-      fps: number;
-      duration: number;
-      format: string;
-    }
-  ) => {
+  IPC_INVOKE.openFile,
+  async (_event, payload: OpenFilePayload) => {
     try {
-      if (!ffmpegPath) return { ok: false, message: "ffmpeg not found" };
+      const { filePath } = payload || {};
+      if (!filePath) return err(ERROR_CODE.invalidParam, "no filePath");
+      const res = await shell.openPath(filePath);
+      return res ? err(ERROR_CODE.rejected, res) : ok({});
+    } catch (e: unknown) {
+      return err(ERROR_CODE.unknown, getErrorMessageFromUnknown(e));
+    }
+  },
+);
+ipcMain.handle(
+  IPC_INVOKE.fileExists,
+  async (_event, payload: FileExistsPayload) => {
+    try {
+      const { filePath } = payload || {};
+      if (!filePath) return err(ERROR_CODE.invalidParam, "no filePath");
+      const exists = fs.existsSync(filePath);
+      return ok({ exists });
+    } catch (e: unknown) {
+      return err(ERROR_CODE.unknown, getErrorMessageFromUnknown(e));
+    }
+  },
+);
+ipcMain.handle(
+  IPC_INVOKE.generateVideo,
+  async (_event, payload: GenerateVideoPayload) => {
+    try {
+      if (!ffmpegPath)
+        return err(ERROR_CODE.ffmpegNotFound, "ffmpeg not found");
       const { width, height, fps, duration, format } = payload || {};
       const w = Number(width) || 640;
       const h = Number(height) || 360;
@@ -207,21 +197,18 @@ ipcMain.handle(
       } catch {
         void 0;
       }
-      return { ok: true, data, filename };
+      return ok({ data, filename });
     } catch (e: unknown) {
-      const msg =
-        typeof e === "object" && e && "message" in e
-          ? String((e as { message?: unknown }).message)
-          : String(e);
-      return { ok: false, message: msg };
+      return err(ERROR_CODE.unknown, getErrorMessageFromUnknown(e));
     }
-  }
+  },
 );
 ipcMain.handle(
-  "generate-audio",
-  async (_event, payload: { duration: number; format?: string }) => {
+  IPC_INVOKE.generateAudio,
+  async (_event, payload: GenerateAudioPayload) => {
     try {
-      if (!ffmpegPath) return { ok: false, message: "ffmpeg not found" };
+      if (!ffmpegPath)
+        return err(ERROR_CODE.ffmpegNotFound, "ffmpeg not found");
       const { duration, format } = payload || {};
       const d = Number(duration) || 5;
       const ext = String(format || "wav").toLowerCase();
@@ -229,19 +216,23 @@ ipcMain.handle(
       await fs.promises.mkdir(outDir, { recursive: true });
       const filename = `audio_${d}s.${ext}`;
       const output = path.join(outDir, filename);
+      const isMp3 = ext === "mp3";
+      const isWav = ext === "wav";
+      const sampleRate = isMp3 ? 8000 : 8000;
+      const channelLayout = "mono";
       const args = [
         "-v",
         "error",
         "-f",
         "lavfi",
         "-i",
-        "anullsrc=r=44100:cl=stereo",
+        `anullsrc=r=${sampleRate}:cl=${channelLayout}`,
         "-t",
         String(d),
       ];
-      if (ext === "wav") {
-        args.push("-c:a", "pcm_s16le");
-      }
+      args.push("-ac", "1", "-ar", String(sampleRate));
+      if (isMp3) args.push("-b:a", "16k");
+      if (isWav) args.push("-c:a", "adpcm_ima_wav");
       args.push("-y", output);
       await new Promise<void>((resolve, reject) => {
         const p = spawn(ffmpegPath as string, args);
@@ -259,15 +250,11 @@ ipcMain.handle(
       } catch {
         void 0;
       }
-      return { ok: true, data, filename };
+      return ok({ data, filename });
     } catch (e: unknown) {
-      const msg =
-        typeof e === "object" && e && "message" in e
-          ? String((e as { message?: unknown }).message)
-          : String(e);
-      return { ok: false, message: msg };
+      return err(ERROR_CODE.unknown, getErrorMessageFromUnknown(e));
     }
-  }
+  },
 );
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits

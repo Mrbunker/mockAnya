@@ -9,14 +9,14 @@ import {
   Tooltip,
 } from "@douyinfe/semi-ui";
 import { IconDelete, IconFolderOpen } from "@douyinfe/semi-icons";
+import { kindToZh, type HistoryItem } from "../domain/history";
 import {
-  kindToZh,
-  type HistoryItem,
   historyAtom,
   clearHistoryAtom,
   removeHistoryAtom,
-} from "../services/history";
+} from "../state/historyAtoms";
 import { openFile, openInFolder, fileExists } from "../services/save";
+import { getErrorDisplayMessage } from "../lib/result";
 import { formatDateString } from "../lib/utils";
 
 type Props = {
@@ -26,8 +26,8 @@ type Props = {
 
 const handleOpenFile = async (item: HistoryItem) => {
   const res = await openFile(item.path!);
-  if (!res?.ok) {
-    Toast.error(String(res?.message || "打开文件失败"));
+  if (!res.ok) {
+    Toast.error(getErrorDisplayMessage(res.error, "打开文件失败"));
   }
 };
 
@@ -43,8 +43,8 @@ export default function HistoryPanel({ visible, onCancel }: Props) {
         history.map(async (item) => {
           if (!item.path) return { id: item.id, invalid: false };
           const res = await fileExists(item.path);
-          return { id: item.id, invalid: res?.ok ? !res.exists : false };
-        })
+          return { id: item.id, invalid: res.ok ? !res.data.exists : false };
+        }),
       );
       const map: Record<string, boolean> = {};
       for (const c of checks) map[c.id] = c.invalid;
@@ -59,7 +59,9 @@ export default function HistoryPanel({ visible, onCancel }: Props) {
       title="历史记录"
       footer={
         <div className="flex justify-between w-full">
-          <div className="text-gray-500 text-sm">共 {history.length} 条</div>
+          <div className="text-semi-color-text-2 text-sm">
+            共 {history.length} 条
+          </div>
           <Button
             theme="borderless"
             type="tertiary"
@@ -82,7 +84,7 @@ export default function HistoryPanel({ visible, onCancel }: Props) {
           />
         ))}
         {!history.length && (
-          <div className="text-sm text-gray-500">暂无历史记录</div>
+          <div className="text-sm text-semi-color-text-2">暂无历史记录</div>
         )}
       </div>
     </SideSheet>
@@ -100,7 +102,7 @@ const HistoryItem = ({
   return (
     <div
       key={item.id}
-      className={`mb-2 p-2 border rounded-md cursor-pointer bg-semi-color-tertiary-light-default ${
+      className={`mb-2 p-2 rounded-md cursor-pointer bg-semi-color-tertiary-light-default ${
         invalid ? "opacity-60" : ""
       }`}
       onClick={() => {
@@ -126,7 +128,7 @@ const HistoryItem = ({
       <div className="flex justify-between items-center">
         <div
           className={`flex gap-2 text-sm ${
-            invalid ? "text-gray-500" : "text-gray-700"
+            invalid ? "text-semi-color-text-2" : "text-semi-color-text-1"
           }`}
         >
           <span>{formatDateString(item.time)}</span>
@@ -142,17 +144,21 @@ const HistoryItem = ({
                 e.stopPropagation();
                 if (!item.path) return;
                 const exists = await fileExists(item.path);
-                if (!exists?.ok) {
-                  Toast.error(String(exists?.message || "打开目录失败"));
+                if (!exists.ok) {
+                  Toast.error(
+                    getErrorDisplayMessage(exists.error, "打开目录失败"),
+                  );
                   return;
                 }
-                if (!exists.exists) {
+                if (!exists.data.exists) {
                   Toast.error("文件不存在");
                   return;
                 }
                 const res = await openInFolder(item.path!);
-                if (!res?.ok) {
-                  Toast.error(String(res?.message || "打开目录失败"));
+                if (!res.ok) {
+                  Toast.error(
+                    getErrorDisplayMessage(res.error, "打开目录失败"),
+                  );
                 }
               }}
               disabled={invalid}

@@ -17,8 +17,9 @@ import AudioGenerator from "./features/AudioGenerator";
 import SettingsPanel from "./components/SettingsPanel";
 import HistoryPanel from "./components/HistoryPanel";
 import { Kind, View } from "./constants";
+import { STORAGE_KEYS } from "./storage/keys";
 
-const tabAtom = atomWithStorage<View>("activeView", View.image);
+const tabAtom = atomWithStorage<View>(STORAGE_KEYS.activeView, View.image);
 
 function App() {
   const [tab, setTab] = useAtom(tabAtom);

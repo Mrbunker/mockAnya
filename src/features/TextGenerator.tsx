@@ -1,21 +1,25 @@
 import { useRef, useState } from "react";
-import { useSetAtom } from "jotai";
-import { Button, Divider, Form, Progress, Toast } from "@douyinfe/semi-ui";
+import { useAtomValue, useSetAtom } from "jotai";
+import { Button, Divider, Form, Progress } from "@douyinfe/semi-ui";
 import { FormApi } from "@douyinfe/semi-ui/lib/es/form";
 import { generateText } from "../services/generate";
-import { saveBlob, getDefaultFilename } from "../services/save";
-import { addHistory, refreshHistoryAtom } from "../services/history";
 import { Kind } from "../constants";
+import { addHistoryAtom } from "../state/historyAtoms";
+import {
+  defaultFilenameAtom,
+  defaultSaveDirAtom,
+} from "../state/settingsAtoms";
 import CommonSaveFields from "../components/CommonSaveFields";
+import { runGenerateSaveFlow } from "../services/generatorFlow";
 
 export default function TextGenerator() {
   const formApiRef = useRef<FormApi | null>(null);
   const [progress, setProgress] = useState(0);
-  const refreshHistory = useSetAtom(refreshHistoryAtom);
+  const defaultFilename = useAtomValue(defaultFilenameAtom);
+  const defaultSaveDir = useAtomValue(defaultSaveDirAtom);
+  const addHistory = useSetAtom(addHistoryAtom);
 
   async function generate() {
-    setProgress(0);
-    await new Promise((r) => setTimeout(r));
     const values = formApiRef.current?.getValues();
     const unit = (values?.fileSizeUnit as string) || "MB";
     const size = values?.fileSizeValue as number | undefined;
@@ -23,61 +27,30 @@ export default function TextGenerator() {
       typeof size === "number" && size > 0
         ? size * (unit === "MB" ? 1024 * 1024 : 1024)
         : undefined;
-    const { blob, filename } = await generateText({
-      format: values.format,
-      repeatText: values.repeatText,
-      totalBytes: fileSize,
-      onProgress: setProgress,
+    await runGenerateSaveFlow({
+      kind: Kind.text,
+      format: values?.format === "json" ? "json" : "txt",
+      customName: values?.customName,
+      customDir: values?.customDir,
+      defaultDir: defaultSaveDir,
+      setProgress,
+      addHistory,
+      generate: () =>
+        generateText({
+          format: values?.format === "json" ? "json" : "txt",
+          repeatText: String(values?.repeatText ?? ""),
+          totalBytes: fileSize,
+          onProgress: setProgress,
+        }),
     });
-    try {
-      type SaveResult = { ok?: boolean; path?: string; message?: string };
-      const nameInput = (values.customName || "").trim();
-      const ext = values.format;
-      const suggested =
-        nameInput.length > 0
-          ? nameInput.toLowerCase().endsWith(`.${ext}`)
-            ? nameInput
-            : `${nameInput}.${ext}`
-          : filename;
-      const res = (await saveBlob(
-        blob,
-        suggested,
-        values.customDir || undefined
-      )) as SaveResult;
-      if (res?.ok) {
-        setProgress(100);
-        Toast.success("保存成功");
-        addHistory({
-          kind: Kind.text,
-          format: values.format,
-          filename: suggested,
-          path: res.path,
-        });
-        refreshHistory();
-      } else {
-        setProgress(0);
-        if (res?.message === "canceled") {
-          Toast.info("已取消");
-        } else {
-          Toast.error(String(res?.message || "保存失败"));
-        }
-      }
-    } catch (e: unknown) {
-      setProgress(0);
-      const msg =
-        typeof e === "object" && e && "message" in e
-          ? String((e as { message?: unknown }).message)
-          : String(e);
-      Toast.error(msg);
-    }
   }
 
   const initValues = {
     format: "txt",
     repeatText: "",
     fileSizeUnit: "KB",
-    fileSizeValue: undefined,
-    customName: getDefaultFilename(),
+    fileSizeValue: 0,
+    customName: defaultFilename,
     customDir: "",
   };
   return (
@@ -96,7 +69,7 @@ export default function TextGenerator() {
                 field="fileSizeValue"
                 noLabel
                 placeholder="请输入目标大小"
-                min={1}
+                min={0}
                 max={1024}
                 innerButtons
                 className="w-[150px]"

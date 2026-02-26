@@ -1,3 +1,7 @@
+import { ipcClient } from "../ipc/client";
+import { IPC_INVOKE } from "../ipc/contract";
+import { err, ok, type Result } from "../lib/result";
+
 export type ImageOptions = {
   format: "png" | "jpeg";
   width: number;
@@ -7,7 +11,9 @@ export type ImageOptions = {
   onProgress?: (value: number) => void;
 };
 
-export async function generateImage(opts: ImageOptions) {
+export async function generateImage(
+  opts: ImageOptions
+): Promise<Result<{ blob: Blob; filename: string }>> {
   const { format, width, height, bgMode, color, onProgress } = opts;
   onProgress?.(10);
   const canvas = document.createElement("canvas");
@@ -39,24 +45,27 @@ export async function generateImage(opts: ImageOptions) {
   });
   const filename = `image_${width}x${height}.${format}`;
   onProgress?.(80);
-  return { blob, filename };
+  return ok({ blob, filename });
 }
 
 export type TextOptions = {
   format: "txt" | "json";
-  repeatText: string;
+  repeatText?: string;
   totalBytes?: number;
   onProgress?: (value: number) => void;
 };
 
-export async function generateText(opts: TextOptions) {
+export async function generateText(
+  opts: TextOptions
+): Promise<Result<{ blob: Blob; filename: string }>> {
   const { format, repeatText, totalBytes, onProgress } = opts;
+  const safeRepeatText = typeof repeatText === "string" ? repeatText : "";
   let blob: Blob;
   if (!totalBytes || totalBytes <= 0) {
     if (format === "txt") {
-      blob = new Blob([repeatText], { type: "text/plain" });
+      blob = new Blob([safeRepeatText], { type: "text/plain" });
     } else {
-      const obj = { content: repeatText, repeatsApprox: 1 };
+      const obj = { content: safeRepeatText, repeatsApprox: 1 };
       blob = new Blob([JSON.stringify(obj, null, 2)], {
         type: "application/json",
       });
@@ -64,7 +73,7 @@ export async function generateText(opts: TextOptions) {
   } else {
     if (format === "txt") {
       const encoder = new TextEncoder();
-      const chunkBytes = encoder.encode((repeatText + "\n").repeat(1000));
+      const chunkBytes = encoder.encode((safeRepeatText + "\n").repeat(1000));
       let size = 0;
       const parts: ArrayBuffer[] = [];
       while (size + chunkBytes.byteLength <= totalBytes) {
@@ -81,17 +90,17 @@ export async function generateText(opts: TextOptions) {
       }
       blob = new Blob(parts, { type: "text/plain" });
     } else {
-      const unitLen = new TextEncoder().encode(repeatText).byteLength;
+      const unitLen = new TextEncoder().encode(safeRepeatText).byteLength;
       const repeatsApprox =
         unitLen > 0 ? Math.round((totalBytes ?? 0) / unitLen) : 0;
-      const obj = { content: repeatText, repeatsApprox };
+      const obj = { content: safeRepeatText, repeatsApprox };
       blob = new Blob([JSON.stringify(obj, null, 2)], {
         type: "application/json",
       });
     }
   }
   const filename = `text.${format}`;
-  return { blob, filename };
+  return ok({ blob, filename });
 }
 
 export type VideoOptions = {
@@ -103,10 +112,12 @@ export type VideoOptions = {
   onProgress?: (value: number) => void;
 };
 
-export async function generateVideo(opts: VideoOptions) {
+export async function generateVideo(
+  opts: VideoOptions
+): Promise<Result<{ blob: Blob; filename: string }>> {
   const { format, width, height, fps, duration, onProgress } = opts;
   onProgress?.(10);
-  const res = await window.ipcRenderer?.invoke("generate-video", {
+  const res = await ipcClient.invoke(IPC_INVOKE.generateVideo, {
     format,
     width,
     height,
@@ -114,17 +125,14 @@ export async function generateVideo(opts: VideoOptions) {
     duration,
   });
   onProgress?.(60);
-  if (!res?.ok) {
-    throw new Error(String(res?.message || "generate video failed"));
-  }
-  const data: Uint8Array = res.data as Uint8Array;
+  if (!res.ok) return err(res.error.code, res.error.message);
+  const { data, filename } = res.data;
   const ab = new ArrayBuffer(data.byteLength);
   const view = new Uint8Array(ab);
   view.set(data);
   const blob = new Blob([ab]);
-  const filename = res.filename as string;
   onProgress?.(80);
-  return { blob, filename };
+  return ok({ blob, filename });
 }
 
 export type AudioOptions = {
@@ -133,23 +141,22 @@ export type AudioOptions = {
   onProgress?: (value: number) => void;
 };
 
-export async function generateAudio(opts: AudioOptions) {
+export async function generateAudio(
+  opts: AudioOptions
+): Promise<Result<{ blob: Blob; filename: string }>> {
   const { format = "wav", duration, onProgress } = opts;
   onProgress?.(10);
-  const res = await window.ipcRenderer?.invoke("generate-audio", {
+  const res = await ipcClient.invoke(IPC_INVOKE.generateAudio, {
     format,
     duration,
   });
   onProgress?.(60);
-  if (!res?.ok) {
-    throw new Error(String(res?.message || "generate audio failed"));
-  }
-  const data: Uint8Array = res.data as Uint8Array;
+  if (!res.ok) return err(res.error.code, res.error.message);
+  const { data, filename } = res.data;
   const ab = new ArrayBuffer(data.byteLength);
   const view = new Uint8Array(ab);
   view.set(data);
   const blob = new Blob([ab]);
-  const filename = res.filename as string;
   onProgress?.(80);
-  return { blob, filename };
+  return ok({ blob, filename });
 }

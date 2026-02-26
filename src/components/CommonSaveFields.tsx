@@ -5,13 +5,17 @@ import {
   useFormApi,
   useFormState,
 } from "@douyinfe/semi-ui";
-import { chooseDefaultSaveDir, getDefaultSaveDir } from "../services/save";
+import { useAtomValue } from "jotai";
+import { chooseDefaultSaveDir } from "../services/save";
 import { IconLink } from "@douyinfe/semi-icons";
+import { defaultSaveDirAtom } from "../state/settingsAtoms";
+import { getErrorDisplayMessage, isCanceledResult } from "../lib/result";
 
 type FormatOption = { label: string; value: string };
 type Props = { formatOptions: FormatOption[] };
 
 export default function CommonSaveFields({ formatOptions }: Props) {
+  const defaultSaveDir = useAtomValue(defaultSaveDirAtom);
   const formState = useFormState();
   const formApi = useFormApi();
   const format = String(formState.values?.format || "");
@@ -47,17 +51,21 @@ export default function CommonSaveFields({ formatOptions }: Props) {
             icon={<IconLink />}
             onClick={async () => {
               const res = await chooseDefaultSaveDir();
-              if (res?.ok) {
-                formApi.setValue("customDir", String(res.dir));
+              if (res.ok) {
+                formApi.setValue("customDir", String(res.data.dir));
               } else {
-                Toast.info(String(res?.message || "已取消"));
+                if (isCanceledResult(res)) Toast.info("已取消");
+                else
+                  Toast.error(
+                    getErrorDisplayMessage(res.error, "选择路径失败"),
+                  );
               }
             }}
           >
             选择路径
           </Button>
         }
-        placeholder={`${getDefaultSaveDir() || "请输入保存路径"}`}
+        placeholder={`${defaultSaveDir || "请输入保存路径"}`}
       />
     </>
   );

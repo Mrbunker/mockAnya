@@ -6,15 +6,16 @@ import {
   useFormState,
   useFormApi,
 } from "@douyinfe/semi-ui";
+import { useAtomValue, useSetAtom } from "jotai";
 import { IconLink } from "@douyinfe/semi-icons";
-import { useDebounceFn, useMount } from "ahooks";
-import {
-  chooseDefaultSaveDir,
-  getDefaultFilename,
-  getDefaultSaveDir,
-  openInFolder,
-} from "../services/save";
+import { useDebounceFn } from "ahooks";
+import { chooseDefaultSaveDir, openInFolder } from "../services/save";
 import { fileExists } from "../services/save";
+import { getErrorDisplayMessage, isCanceledResult } from "../lib/result";
+import {
+  defaultFilenameAtom,
+  defaultSaveDirAtom,
+} from "../state/settingsAtoms";
 
 type Props = {
   visible: boolean;
@@ -27,18 +28,12 @@ type FormState = {
 };
 
 export default function SettingsPanel({ visible, onCancel }: Props) {
+  const defaultSaveDir = useAtomValue(defaultSaveDirAtom);
+  const defaultFilename = useAtomValue(defaultFilenameAtom);
   const initValues = {
-    defaultDir: getDefaultSaveDir() ?? "",
-    defaultFilename: getDefaultFilename() ?? __APP_NAME__,
+    defaultDir: defaultSaveDir || "",
+    defaultFilename: defaultFilename ?? __APP_NAME__,
   };
-
-  useMount(() => {
-    localStorage.setItem("defaultSaveDir", initValues.defaultDir);
-    localStorage.setItem(
-      "defaultFilename",
-      initValues.defaultFilename ?? __APP_NAME__
-    );
-  });
 
   return (
     <SideSheet visible={visible} onCancel={onCancel} title="设置">
@@ -50,20 +45,21 @@ export default function SettingsPanel({ visible, onCancel }: Props) {
 }
 
 const FormRender = () => {
+  const setDefaultSaveDir = useSetAtom(defaultSaveDirAtom);
+  const setDefaultFilename = useSetAtom(defaultFilenameAtom);
   const { run: handleDirSubmit } = useDebounceFn(
     (values: { defaultDir: string }) => {
       const dir = values.defaultDir?.trim();
-      localStorage.setItem("defaultSaveDir", dir);
+      setDefaultSaveDir(dir || "");
     },
-    { wait: 700 }
+    { wait: 700 },
   );
   const { run: handleNameSubmit } = useDebounceFn(
     (values: { defaultFilename: string }) => {
       const name = values.defaultFilename?.trim();
-      console.log("||name", name);
-      localStorage.setItem("defaultFilename", name || "");
+      setDefaultFilename(name || "");
     },
-    { wait: 700 }
+    { wait: 700 },
   );
 
   const formValues = useFormState<FormState>();
@@ -88,11 +84,15 @@ const FormRender = () => {
             icon={<IconLink />}
             onClick={async () => {
               const res = await chooseDefaultSaveDir();
-              if (res?.ok) {
-                handleDirSubmit({ defaultDir: String(res.dir) });
-                formApi.setValue("defaultDir", String(res.dir));
+              if (res.ok) {
+                handleDirSubmit({ defaultDir: String(res.data.dir) });
+                formApi.setValue("defaultDir", String(res.data.dir));
               } else {
-                Toast.info(String(res?.message || "已取消"));
+                if (isCanceledResult(res)) Toast.info("已取消");
+                else
+                  Toast.error(
+                    getErrorDisplayMessage(res.error, "选择路径失败"),
+                  );
               }
             }}
           >
@@ -103,17 +103,21 @@ const FormRender = () => {
               type="tertiary"
               onClick={async () => {
                 const exists = await fileExists(defaultDir!);
-                if (!exists?.ok) {
-                  Toast.error(String(exists?.message || "打开目录失败"));
+                if (!exists.ok) {
+                  Toast.error(
+                    getErrorDisplayMessage(exists.error, "打开目录失败"),
+                  );
                   return;
                 }
-                if (!exists.exists) {
+                if (!exists.data.exists) {
                   Toast.error("目录不存在");
                   return;
                 }
                 const res = await openInFolder(defaultDir!);
-                if (!res?.ok) {
-                  Toast.error(String(res?.message || "打开目录失败"));
+                if (!res.ok) {
+                  Toast.error(
+                    getErrorDisplayMessage(res.error, "打开目录失败"),
+                  );
                 }
               }}
             >

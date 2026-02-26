@@ -1,0 +1,7 @@
+- [x] IPC 通道常量化，渲染侧无字符串直连 invoke
+- [x] preload 仅允许白名单 channel 调用
+- [x] 四类生成器复用统一生成保存流程，重复代码显著减少
+- [x] storage keys 集中管理，Settings/History 不再分散写 localStorage
+- [x] Semi 样式基线引入成功，Tailwind token 变量可用且 reset 不破坏默认主题
+- [x] 具备 ErrorBoundary 与统一错误码，失败提示一致
+- [x] 最小测试集可运行且覆盖核心工具模块
