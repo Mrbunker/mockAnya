@@ -71,8 +71,8 @@ export default function AudioGenerator() {
             <Divider />
             <CommonSaveFields
               formatOptions={[
-                { label: "WAV", value: "wav" },
                 { label: "MP3", value: "mp3" },
+                { label: "WAV", value: "wav" },
               ]}
             />
           </>

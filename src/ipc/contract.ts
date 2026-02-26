@@ -8,6 +8,7 @@ export const IPC_INVOKE = {
   fileExists: "file-exists",
   generateVideo: "generate-video",
   generateAudio: "generate-audio",
+  generatePdf: "generate-pdf",
 } as const;
 
 export const IPC_EVENT = {
@@ -22,6 +23,7 @@ export const IPC_INVOKE_WHITELIST = [
   IPC_INVOKE.fileExists,
   IPC_INVOKE.generateVideo,
   IPC_INVOKE.generateAudio,
+  IPC_INVOKE.generatePdf,
 ] as const;
 
 export const IPC_EVENT_WHITELIST = [IPC_EVENT.mainProcessMessage] as const;
@@ -66,6 +68,12 @@ export type GenerateAudioResult = Result<{
   filename: string;
 }>;
 
+export type GeneratePdfPayload = { text: string; targetBytes?: number };
+export type GeneratePdfResult = Result<{
+  data: Uint8Array;
+  filename: string;
+}>;
+
 export type IpcInvokeMap = {
   [IPC_INVOKE.saveFile]: { req: SaveFilePayload; res: SaveFileResult };
   [IPC_INVOKE.openInFolder]: {
@@ -82,6 +90,10 @@ export type IpcInvokeMap = {
   [IPC_INVOKE.generateAudio]: {
     req: GenerateAudioPayload;
     res: GenerateAudioResult;
+  };
+  [IPC_INVOKE.generatePdf]: {
+    req: GeneratePdfPayload;
+    res: GeneratePdfResult;
   };
 };
 

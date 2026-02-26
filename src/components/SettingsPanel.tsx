@@ -36,7 +36,24 @@ export default function SettingsPanel({ visible, onCancel }: Props) {
   };
 
   return (
-    <SideSheet visible={visible} onCancel={onCancel} title="设置">
+    <SideSheet
+      visible={visible}
+      onCancel={onCancel}
+      title="设置"
+      footer={
+        <div className="text-sm">
+          GitHub：
+          <a
+            href="https://github.com/Mrbunker/mockAnya"
+            target="_blank"
+            rel="noreferrer"
+            className="ml-1 text-blue-600 hover:underline"
+          >
+            https://github.com/Mrbunker/mockAnya
+          </a>
+        </div>
+      }
+    >
       <Form<FormState> initValues={initValues}>
         <FormRender />
       </Form>

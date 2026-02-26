@@ -49,6 +49,9 @@ function timeoutMsForInvoke(
       Math.max(DEFAULT_TIMEOUT_MS, base + 60000),
     );
   }
+  if (channel === IPC_INVOKE.generatePdf) {
+    return Math.max(DEFAULT_TIMEOUT_MS, 30000);
+  }
   return DEFAULT_TIMEOUT_MS;
 }
 

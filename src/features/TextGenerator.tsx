@@ -25,11 +25,16 @@ export default function TextGenerator() {
     const size = values?.fileSizeValue as number | undefined;
     const fileSize =
       typeof size === "number" && size > 0
-        ? size * (unit === "MB" ? 1024 * 1024 : 1024)
+        ? size * (unit === "MB" ? 1000 * 1000 : 1000)
         : undefined;
+    const rawFormat = String(values?.format || "txt");
+    const format =
+      rawFormat === "json" || rawFormat === "csv" || rawFormat === "pdf"
+        ? rawFormat
+        : "txt";
     await runGenerateSaveFlow({
       kind: Kind.text,
-      format: values?.format === "json" ? "json" : "txt",
+      format,
       customName: values?.customName,
       customDir: values?.customDir,
       defaultDir: defaultSaveDir,
@@ -37,7 +42,7 @@ export default function TextGenerator() {
       addHistory,
       generate: () =>
         generateText({
-          format: values?.format === "json" ? "json" : "txt",
+          format,
           repeatText: String(values?.repeatText ?? ""),
           totalBytes: fileSize,
           onProgress: setProgress,
@@ -96,6 +101,8 @@ export default function TextGenerator() {
               formatOptions={[
                 { label: "TXT", value: "txt" },
                 { label: "JSON", value: "json" },
+                { label: "CSV", value: "csv" },
+                { label: "PDF", value: "pdf" },
               ]}
             />
           </>
