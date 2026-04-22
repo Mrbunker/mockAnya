@@ -14,6 +14,7 @@ const invokeChannelSet = new Set<string>(IPC_INVOKE_WHITELIST)
 const eventChannelSet = new Set<string>(IPC_EVENT_WHITELIST)
 const sendChannelSet = new Set<string>()
 
+// eslint-disable-next-line @typescript-eslint/ban-types
 const onListenerMap = new Map<string, WeakMap<Function, Function>>()
 
 function requireAllowed(set: Set<string>, channel: string) {
@@ -40,6 +41,7 @@ const api: IpcRendererBridge = {
         ...(args as unknown[]),
       )
     wm.set(listener, wrapped)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ipcRenderer.on(channel, wrapped as any)
   },
   off<C extends IpcEventChannel>(
@@ -51,6 +53,7 @@ const api: IpcRendererBridge = {
   ) {
     requireAllowed(eventChannelSet, channel)
     const wrapped = onListenerMap.get(channel)?.get(listener)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ipcRenderer.off(channel, (wrapped ?? listener) as any)
   },
   send(channel: string, ...args: unknown[]) {

@@ -12,10 +12,7 @@ import { useDebounceFn } from "ahooks";
 import { chooseDefaultSaveDir, openInFolder } from "../services/save";
 import { fileExists } from "../services/save";
 import { getErrorDisplayMessage, isCanceledResult } from "../lib/result";
-import {
-  defaultFilenameAtom,
-  defaultSaveDirAtom,
-} from "../state/settingsAtoms";
+import { defaultSaveDirAtom } from "../state/settingsAtoms";
 
 type Props = {
   visible: boolean;
@@ -24,15 +21,12 @@ type Props = {
 
 type FormState = {
   defaultDir: string;
-  defaultFilename: string;
 };
 
 export default function SettingsPanel({ visible, onCancel }: Props) {
   const defaultSaveDir = useAtomValue(defaultSaveDirAtom);
-  const defaultFilename = useAtomValue(defaultFilenameAtom);
   const initValues = {
     defaultDir: defaultSaveDir || "",
-    defaultFilename: defaultFilename ?? __APP_NAME__,
   };
 
   return (
@@ -63,18 +57,10 @@ export default function SettingsPanel({ visible, onCancel }: Props) {
 
 const FormRender = () => {
   const setDefaultSaveDir = useSetAtom(defaultSaveDirAtom);
-  const setDefaultFilename = useSetAtom(defaultFilenameAtom);
   const { run: handleDirSubmit } = useDebounceFn(
     (values: { defaultDir: string }) => {
       const dir = values.defaultDir?.trim();
       setDefaultSaveDir(dir || "");
-    },
-    { wait: 700 },
-  );
-  const { run: handleNameSubmit } = useDebounceFn(
-    (values: { defaultFilename: string }) => {
-      const name = values.defaultFilename?.trim();
-      setDefaultFilename(name || "");
     },
     { wait: 700 },
   );
@@ -143,20 +129,6 @@ const FormRender = () => {
           )}
         </div>
       </Form.Slot>
-
-      <Form.Input
-        label="默认文件名"
-        field="defaultFilename"
-        showClear
-        placeholder="默认用于生成文件名"
-        rules={[
-          {
-            pattern: /^[^/\\:*?"<>|]+$/,
-            message: '文件名不能包含 / \\ : * ? " < > |',
-          },
-        ]}
-        onChange={(value) => handleNameSubmit({ defaultFilename: value })}
-      />
     </>
   );
 };

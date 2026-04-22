@@ -1,3 +1,4 @@
+import React from "react";
 import { Toast } from "@douyinfe/semi-ui";
 import { Kind } from "../constants";
 import { HistoryItem } from "../domain/history";
@@ -8,7 +9,36 @@ import {
   isCanceledResult,
   type Result,
 } from "../lib/result";
-import { saveBlob } from "./save";
+import { openFile, saveBlob } from "./save";
+
+function buildOpenFileToastContent(filePath: string) {
+  return React.createElement(
+    "span",
+    null,
+    "保存成功",
+    React.createElement(
+      "span",
+      {
+        onClick: (e: React.MouseEvent) => {
+          e.stopPropagation();
+          void (async () => {
+            const res = await openFile(filePath);
+            if (!res.ok) {
+              Toast.error(getErrorDisplayMessage(res.error, "打开文件失败"));
+            }
+          })();
+        },
+        style: {
+          marginLeft: 12,
+          color: "var(--semi-color-primary)",
+          cursor: "pointer",
+          textDecoration: "underline",
+        },
+      },
+      "打开",
+    ),
+  );
+}
 
 export async function runGenerateSaveFlow(opts: {
   kind: Kind;
@@ -42,7 +72,13 @@ export async function runGenerateSaveFlow(opts: {
     const saved = await saveBlob(blob, suggested, dir ? dir : undefined);
     if (saved.ok) {
       opts.setProgress(100);
-      Toast.success("保存成功");
+      if (saved.data.path) {
+        Toast.success({
+          content: buildOpenFileToastContent(saved.data.path),
+        });
+      } else {
+        Toast.success("保存成功");
+      }
       opts.addHistory({
         kind: opts.kind,
         format: opts.format,

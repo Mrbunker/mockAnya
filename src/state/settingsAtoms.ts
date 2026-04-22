@@ -5,8 +5,3 @@ export const defaultSaveDirAtom = atomWithStorage<string>(
   STORAGE_KEYS.defaultSaveDir,
   ""
 );
-
-export const defaultFilenameAtom = atomWithStorage<string>(
-  STORAGE_KEYS.defaultFilename,
-  __APP_NAME__
-);

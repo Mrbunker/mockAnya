@@ -31,7 +31,7 @@ export default function CommonSaveFields({ formatOptions }: Props) {
         className="w-full"
         field="customName"
         label="文件名"
-        placeholder="请输入"
+        placeholder="留空则自动生成"
         rules={[
           {
             pattern: /^[^/\\:*?"<>|]+$/,

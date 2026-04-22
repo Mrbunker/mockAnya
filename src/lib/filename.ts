@@ -5,21 +5,57 @@ export function normalizeExt(ext: string) {
     .toLowerCase();
 }
 
+function randomString(len = 6) {
+  const alphabet = "23456789abcdefghjkmnpqrstuvwxyz";
+  const n = Math.max(1, Math.floor(len || 0));
+  try {
+    const bytes = new Uint8Array(n);
+    crypto.getRandomValues(bytes);
+    let out = "";
+    for (let i = 0; i < n; i += 1) {
+      out += alphabet[bytes[i] % alphabet.length];
+    }
+    return out;
+  } catch {
+    let out = "";
+    for (let i = 0; i < n; i += 1) {
+      out += alphabet[Math.floor(Math.random() * alphabet.length)];
+    }
+    return out;
+  }
+}
+
+function getBasename(name: string) {
+  return String(name || "")
+    .trim()
+    .replace(/\.+$/, "");
+}
+
+function buildAutoBasename(fallback: string) {
+  const base = getBasename(fallback)
+    .replace(/\.[^.]+$/, "")
+    .replace(/^(image|video|audio|text)[_-]+/i, "");
+  const suffix = randomString();
+  if (!base) return suffix;
+  return `${base}_${suffix}`;
+}
+
 export function buildSuggestedFilename(
   customName: string | undefined,
   ext: string | undefined,
-  fallback: string
+  fallback: string,
 ) {
-  const nameInput = (customName || "").trim().replace(/\.+$/, "");
+  const nameInput = getBasename(customName || "");
   const normalizedExt = normalizeExt(ext || "");
-  if (!nameInput) return fallback;
-  if (!normalizedExt) return nameInput;
+  const resolvedName = nameInput || buildAutoBasename(fallback);
+  if (!resolvedName) return fallback;
+  if (!normalizedExt) return resolvedName;
   const suffix = `.${normalizedExt}`;
-  if (nameInput.toLowerCase().endsWith(suffix)) return nameInput;
-  const lastDot = nameInput.lastIndexOf(".");
-  if (lastDot > 0 && lastDot < nameInput.length - 1) {
-    const base = nameInput.slice(0, lastDot);
+  if (resolvedName.toLowerCase().endsWith(suffix)) return resolvedName;
+  const lastDot = resolvedName.lastIndexOf(".");
+  if (lastDot > 0 && lastDot < resolvedName.length - 1) {
+    const base = resolvedName.slice(0, lastDot);
     return `${base}${suffix}`;
   }
-  return `${nameInput}${suffix}`;
+  return `${resolvedName}${suffix}`;
 }

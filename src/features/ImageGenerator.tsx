@@ -5,17 +5,13 @@ import { FormApi } from "@douyinfe/semi-ui/lib/es/form";
 import { generateImage } from "../services/generate";
 import { Kind } from "../constants";
 import { addHistoryAtom } from "../state/historyAtoms";
-import {
-  defaultFilenameAtom,
-  defaultSaveDirAtom,
-} from "../state/settingsAtoms";
+import { defaultSaveDirAtom } from "../state/settingsAtoms";
 import CommonSaveFields from "../components/CommonSaveFields";
 import { runGenerateSaveFlow } from "../services/generatorFlow";
 
 export default function ImageGenerator() {
   const formApiRef = useRef<FormApi>();
   const [progress, setProgress] = useState(0);
-  const defaultFilename = useAtomValue(defaultFilenameAtom);
   const defaultSaveDir = useAtomValue(defaultSaveDirAtom);
   const addHistory = useSetAtom(addHistoryAtom);
 
@@ -62,7 +58,7 @@ export default function ImageGenerator() {
           height: 360,
           bgMode: "black",
           color: "#000000",
-          customName: defaultFilename,
+          customName: "",
           customDir: "",
         }}
       >

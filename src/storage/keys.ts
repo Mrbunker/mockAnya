@@ -1,7 +1,6 @@
 export const STORAGE_KEYS = {
   activeView: "activeView",
   defaultSaveDir: "defaultSaveDir",
-  defaultFilename: "defaultFilename",
   genHistory: "genHistory",
 } as const;
 
