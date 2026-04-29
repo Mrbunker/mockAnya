@@ -78,7 +78,7 @@ function buildVideoOverlayFilter(opts: {
     `drawtext=${fontfile}` +
     `text='${escapeDrawtextValue(label)}':` +
     `fontcolor=white:fontsize=${fontSize}:` +
-    `x=24:y=h-th-24:` +
+    `x=w-tw-24:y=24:` +
     "box=1:boxcolor=0x0f172a@0.6:boxborderw=14"
   );
 }
