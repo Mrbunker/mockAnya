@@ -26,6 +26,14 @@ import {
 const requireFFmpeg = createRequire(import.meta.url);
 const ffmpegPath = requireFFmpeg("ffmpeg-static");
 
+function getExecutablePath(filePath: string | null) {
+  if (!filePath) return "";
+  const resolved = String(filePath);
+  return app.isPackaged
+    ? resolved.replace("app.asar", "app.asar.unpacked")
+    : resolved;
+}
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // The built directory structure
@@ -49,6 +57,70 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
   : RENDERER_DIST;
 
 let win: BrowserWindow | null;
+
+function gcd(a: number, b: number) {
+  let x = Math.abs(Math.round(a));
+  let y = Math.abs(Math.round(b));
+  while (y) {
+    const t = x % y;
+    x = y;
+    y = t;
+  }
+  return x || 1;
+}
+
+function getAspectRatio(width: number, height: number) {
+  const divisor = gcd(width, height);
+  return `${Math.round(width / divisor)}:${Math.round(height / divisor)}`;
+}
+
+function escapeDrawtextValue(value: string) {
+  return String(value)
+    .replace(/\\/g, "\\\\")
+    .replace(/:/g, "\\:")
+    .replace(/'/g, "\\'");
+}
+
+function getDrawtextFontPath() {
+  const candidates =
+    process.platform === "darwin"
+      ? [
+          "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+          "/System/Library/Fonts/Supplemental/Arial.ttf",
+        ]
+      : process.platform === "win32"
+        ? ["C:/Windows/Fonts/arial.ttf", "C:/Windows/Fonts/segoeui.ttf"]
+        : [
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/dejavu/DejaVuSans.ttf",
+          ];
+  return candidates.find((fontPath) => fs.existsSync(fontPath)) || "";
+}
+
+function buildVideoOverlayFilter(opts: {
+  width: number;
+  height: number;
+  fps: number;
+  duration: number;
+}) {
+  const { width, height, fps, duration } = opts;
+  const label = `Size ${width}x${height} | AR ${getAspectRatio(
+    width,
+    height,
+  )} | ${fps} FPS | ${duration}s`;
+  const fontPath = getDrawtextFontPath();
+  const fontfile = fontPath
+    ? `fontfile='${escapeDrawtextValue(fontPath)}':`
+    : "";
+  const fontSize = Math.max(18, Math.round(Math.min(width, height) * 0.05));
+  return (
+    `drawtext=${fontfile}` +
+    `text='${escapeDrawtextValue(label)}':` +
+    `fontcolor=white:fontsize=${fontSize}:` +
+    `x=24:y=h-th-24:` +
+    "box=1:boxcolor=0x0f172a@0.6:boxborderw=14"
+  );
+}
 
 function toPdfLiteralString(text: string) {
   let out = "(";
@@ -304,7 +376,8 @@ ipcMain.handle(
   IPC_INVOKE.generateVideo,
   async (_event, payload: GenerateVideoPayload) => {
     try {
-      if (!ffmpegPath)
+      const executablePath = getExecutablePath(ffmpegPath);
+      if (!executablePath)
         return err(ERROR_CODE.ffmpegNotFound, "ffmpeg not found");
       const { width, height, fps, duration, format } = payload || {};
       const w = Number(width) || 640;
@@ -322,16 +395,23 @@ ipcMain.handle(
         "-f",
         "lavfi",
         "-i",
-        `color=c=black:s=${w}x${h}:d=${d}`,
+        `color=c=0x334155:s=${w}x${h}:d=${d}`,
         "-r",
         String(r),
+        "-vf",
+        buildVideoOverlayFilter({
+          width: w,
+          height: h,
+          fps: r,
+          duration: d,
+        }),
       ];
       if (ext === "mp4" || ext === "mov" || ext === "mkv") {
         args.push("-pix_fmt", "yuv420p");
       }
       args.push("-y", output);
       await new Promise<void>((resolve, reject) => {
-        const p = spawn(ffmpegPath as string, args);
+        const p = spawn(executablePath, args);
         let stderr = "";
         p.stderr.on("data", (c) => (stderr += String(c)));
         p.on("error", reject);
@@ -356,7 +436,8 @@ ipcMain.handle(
   IPC_INVOKE.generateAudio,
   async (_event, payload: GenerateAudioPayload) => {
     try {
-      if (!ffmpegPath)
+      const executablePath = getExecutablePath(ffmpegPath);
+      if (!executablePath)
         return err(ERROR_CODE.ffmpegNotFound, "ffmpeg not found");
       const { duration, format } = payload || {};
       const d = Number(duration) || 5;
@@ -384,7 +465,7 @@ ipcMain.handle(
       if (isWav) args.push("-c:a", "adpcm_ima_wav");
       args.push("-y", output);
       await new Promise<void>((resolve, reject) => {
-        const p = spawn(ffmpegPath as string, args);
+        const p = spawn(executablePath, args);
         let stderr = "";
         p.stderr.on("data", (c) => (stderr += String(c)));
         p.on("error", reject);
